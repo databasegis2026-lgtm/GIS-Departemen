@@ -32,104 +32,7 @@ export interface ConservationAreaItem {
   sertifikasi_standar: "ISPO & RSPO Mandatori" | "Kearifan Lokal Adat";
 }
 
-const MOCK_CONSERVATION: ConservationAreaItem[] = [
-  {
-    id: "kns-01",
-    kode_hcv: "HCV-BUM1-01",
-    nama_area: "Koridor Satwa & Hutan Sekunder Blok HGU Utara",
-    kategori: "areaHcv",
-    kategori_label: "Area HCV / NKT",
-    estate: "BUM 1",
-    afdeling: "AFD 3",
-    region: "REGION 1",
-    luas_ha: 320.5,
-    tutupan_lahan: "Hutan Sekunder Dataran Rendah",
-    status_patok: "Terpancang Lengkap (Plang Merah)",
-    flora_fauna_penting: "Orangutan (Pongo pygmaeus), Burung Enggang, Kayu Ulin",
-    frekuensi_patroli: "1x per Minggu (Tim Patroli Keamanan Kebun)",
-    sertifikasi_standar: "ISPO & RSPO Mandatori",
-  },
-  {
-    id: "kns-02",
-    kode_hcv: "SMP-BUM2-01",
-    nama_area: "Zona Sempadan Riparian Sungai Sampit Hilir",
-    kategori: "sapadanSungai",
-    kategori_label: "Sempadan Sungai",
-    estate: "BUM 2",
-    afdeling: "AFD 5",
-    region: "REGION 1",
-    luas_ha: 368.0,
-    tutupan_lahan: "Vegetasi Alami Riparian & Bambu",
-    status_patok: "Terpancang Lengkap (Plang Merah)",
-    flora_fauna_penting: "Bekantan (Nasalis larvatus), Buaya Muara, Ikan Tapah",
-    frekuensi_patroli: "2x per Bulan (Patroli Jalur Air)",
-    sertifikasi_standar: "ISPO & RSPO Mandatori",
-  },
-  {
-    id: "kns-03",
-    kode_hcv: "STB-BUM5-01",
-    nama_area: "Situs Makam Keramat Datu Adat Dayak & Pohon Temenggung",
-    kategori: "kuburanSitusBudaya",
-    kategori_label: "Kuburan & Situs Budaya",
-    estate: "BUM 5",
-    afdeling: "AFD 21",
-    region: "REGION 2",
-    luas_ha: 14.2,
-    tutupan_lahan: "Enclave Hutan Adat Tertutup",
-    status_patok: "Terpancang Lengkap (Plang Merah)",
-    flora_fauna_penting: "Pohon Meranti Keramat, Makam Bersejarah Nenek Moyang",
-    frekuensi_patroli: "1x per Bulan bersama Tokoh Adat",
-    sertifikasi_standar: "Kearifan Lokal Adat",
-  },
-  {
-    id: "kns-04",
-    kode_hcv: "MTA-BUM6-01",
-    nama_area: "Kawasan Resapan Mata Air Tirta Lestari",
-    kategori: "lokasiMataAir",
-    kategori_label: "Lokasi Mata Air",
-    estate: "BUM 6",
-    afdeling: "AFD 25",
-    region: "REGION 2",
-    luas_ha: 28.5,
-    tutupan_lahan: "Hutan Cekungan Resapan Alami",
-    status_patok: "Terpancang Lengkap (Plang Merah)",
-    flora_fauna_penting: "Sumber Air Baku Emplasemen & Warga Sekitar",
-    frekuensi_patroli: "2x per Minggu (Pemeriksaan Kualitas Air Fisik)",
-    sertifikasi_standar: "ISPO & RSPO Mandatori",
-  },
-  {
-    id: "kns-05",
-    kode_hcv: "HCV-BSL-02",
-    nama_area: "Kawasan Penyangga Rawa Gambut Dalam BSL",
-    kategori: "areaHcv",
-    kategori_label: "Area HCV / NKT",
-    estate: "BSL",
-    afdeling: "AFD 2",
-    region: "REGION 3",
-    luas_ha: 410.0,
-    tutupan_lahan: "Hutan Rawa Gambut Tergenang Alami",
-    status_patok: "Sebagian Perlu Perbaikan",
-    flora_fauna_penting: "Kucing Tandang (Prionailurus planiceps), Ramin",
-    frekuensi_patroli: "1x per Minggu",
-    sertifikasi_standar: "ISPO & RSPO Mandatori",
-  },
-  {
-    id: "kns-06",
-    kode_hcv: "SMP-BUM7-02",
-    nama_area: "Sempadan Anak Sungai Seranau",
-    kategori: "sapadanSungai",
-    kategori_label: "Sempadan Sungai",
-    estate: "BUM 7",
-    afdeling: "AFD 29",
-    region: "REGION 2",
-    luas_ha: 156.0,
-    tutupan_lahan: "Belukar Rawa & Gelam",
-    status_patok: "Terpancang Lengkap (Plang Merah)",
-    flora_fauna_penting: "Burung Pecuk Ular, Katak Rawa Indikator",
-    frekuensi_patroli: "2x per Bulan",
-    sertifikasi_standar: "ISPO & RSPO Mandatori",
-  },
-];
+const MOCK_CONSERVATION: ConservationAreaItem[] = [];
 
 export default function AreaKonservasiPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("semua");
@@ -354,7 +257,14 @@ export default function AreaKonservasiPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
-                {filteredAreas.map((item) => (
+                {filteredAreas.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                      Belum ada data kawasan konservasi. Silakan unggah berkas SHP kawasan lindung.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAreas.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <td className="px-4 py-3">
                       <div className="font-bold text-gray-900 dark:text-white">{item.nama_area}</div>
@@ -397,7 +307,8 @@ export default function AreaKonservasiPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                ))
+              )}
               </tbody>
             </table>
           </div>

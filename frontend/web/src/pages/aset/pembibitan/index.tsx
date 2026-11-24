@@ -30,128 +30,7 @@ export interface NurseryBatch {
   status: "Siap Salur ke Lapangan" | "Pemeliharaan Rutin" | "Tahap Aklimatisasi";
 }
 
-const MOCK_NURSERIES: NurseryBatch[] = [
-  {
-    id: "nrs-01",
-    batch_id: "NRS-BUM1-2025-A1",
-    estate: "BUM 1",
-    afdeling: "AFD 2",
-    region: "REGION 1",
-    tahap: "Main Nursery (3-12 Bulan)",
-    varietas: "DxP Dami Mas",
-    produsen_benih: "PT Dami Mas Sejahtera",
-    bulan_semai: "Januari 2025",
-    umur_bulan: 11,
-    jumlah_kecambah_diterima: 45000,
-    bibit_hidup: 42100,
-    bibit_siap_salur: 39800,
-    bibit_afkir_culling: 2900,
-    culling_rate_pct: 6.4,
-    sistem_irigasi: "Sumisansui Otomatis",
-    luas_area_ha: 3.2,
-    status: "Siap Salur ke Lapangan",
-  },
-  {
-    id: "nrs-02",
-    batch_id: "NRS-BUM2-2025-B2",
-    estate: "BUM 2",
-    afdeling: "AFD 5",
-    region: "REGION 1",
-    tahap: "Main Nursery (3-12 Bulan)",
-    varietas: "DxP Marihat (PPKS)",
-    produsen_benih: "Pusat Penelitian Kelapa Sawit (PPKS Medan)",
-    bulan_semai: "Maret 2025",
-    umur_bulan: 9,
-    jumlah_kecambah_diterima: 50000,
-    bibit_hidup: 46800,
-    bibit_siap_salur: 43500,
-    bibit_afkir_culling: 3200,
-    culling_rate_pct: 6.4,
-    sistem_irigasi: "Sumisansui Otomatis",
-    luas_area_ha: 3.8,
-    status: "Siap Salur ke Lapangan",
-  },
-  {
-    id: "nrs-03",
-    batch_id: "NRS-BUM4-2025-C1",
-    estate: "BUM 4",
-    afdeling: "AFD 8",
-    region: "REGION 1",
-    tahap: "Main Nursery (3-12 Bulan)",
-    varietas: "DxP Topaz 3",
-    produsen_benih: "Asian Agri (Topaz)",
-    bulan_semai: "Juni 2025",
-    umur_bulan: 6,
-    jumlah_kecambah_diterima: 60000,
-    bibit_hidup: 57200,
-    bibit_siap_salur: 52000,
-    bibit_afkir_culling: 2800,
-    culling_rate_pct: 4.7,
-    sistem_irigasi: "Overhead Sprinkler",
-    luas_area_ha: 4.5,
-    status: "Pemeliharaan Rutin",
-  },
-  {
-    id: "nrs-04",
-    batch_id: "NRS-BUM5-2025-D1",
-    estate: "BUM 5",
-    afdeling: "AFD 20",
-    region: "REGION 2",
-    tahap: "Pre-Nursery (<3 Bulan)",
-    varietas: "DxP Socfindo",
-    produsen_benih: "PT Socfin Indonesia",
-    bulan_semai: "November 2025",
-    umur_bulan: 2,
-    jumlah_kecambah_diterima: 35000,
-    bibit_hidup: 33800,
-    bibit_siap_salur: 0,
-    bibit_afkir_culling: 1200,
-    culling_rate_pct: 3.4,
-    sistem_irigasi: "Sumisansui Otomatis",
-    luas_area_ha: 1.2,
-    status: "Tahap Aklimatisasi",
-  },
-  {
-    id: "nrs-05",
-    batch_id: "NRS-BUM6-2025-E2",
-    estate: "BUM 6",
-    afdeling: "AFD 25",
-    region: "REGION 2",
-    tahap: "Main Nursery (3-12 Bulan)",
-    varietas: "DxP Dami Mas",
-    produsen_benih: "PT Dami Mas Sejahtera",
-    bulan_semai: "Februari 2025",
-    umur_bulan: 10,
-    jumlah_kecambah_diterima: 40000,
-    bibit_hidup: 37400,
-    bibit_siap_salur: 35100,
-    bibit_afkir_culling: 2600,
-    culling_rate_pct: 6.5,
-    sistem_irigasi: "Sumisansui Otomatis",
-    luas_area_ha: 3.0,
-    status: "Siap Salur ke Lapangan",
-  },
-  {
-    id: "nrs-06",
-    batch_id: "NRS-BSL-2025-F1",
-    estate: "BSL",
-    afdeling: "AFD 1",
-    region: "REGION 3",
-    tahap: "Main Nursery (3-12 Bulan)",
-    varietas: "DxP Marihat (PPKS)",
-    produsen_benih: "PPKS Medan",
-    bulan_semai: "April 2025",
-    umur_bulan: 8,
-    jumlah_kecambah_diterima: 55000,
-    bibit_hidup: 51200,
-    bibit_siap_salur: 48000,
-    bibit_afkir_culling: 3800,
-    culling_rate_pct: 6.9,
-    sistem_irigasi: "Overhead Sprinkler",
-    luas_area_ha: 4.2,
-    status: "Siap Salur ke Lapangan",
-  },
-];
+const MOCK_NURSERIES: NurseryBatch[] = [];
 
 export default function PembibitanPage() {
   const [regionFilter, setRegionFilter] = useState<string>("Semua");
@@ -339,59 +218,67 @@ export default function PembibitanPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
-                {filteredBatches.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-gray-900 dark:text-white">{item.varietas}</div>
-                      <div className="font-mono text-[11px] text-gray-500 dark:text-gray-400">{item.batch_id}</div>
-                      <div className="text-[10px] text-gray-400">{item.produsen_benih}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 dark:text-white">{item.estate} • {item.afdeling}</div>
-                      <div className="text-[11px] text-gray-500">{item.region} ({item.luas_area_ha} Ha)</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>{item.tahap}</div>
-                      <div className="text-[11px] text-gray-500 font-medium">Umur {item.umur_bulan} Bulan ({item.bulan_semai})</div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {item.bibit_hidup.toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                      {item.bibit_siap_salur.toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="font-medium text-gray-900 dark:text-white">{item.culling_rate_pct}%</span>
-                      <div className="text-[10px] text-gray-400">{item.bibit_afkir_culling.toLocaleString("id-ID")} pkk</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                        {item.sistem_irigasi}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${item.status === "Siap Salur ke Lapangan"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                          : item.status === "Pemeliharaan Rutin"
-                            ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
-                            : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                          }`}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBatch(item)}
-                        className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      >
-                        Detail
-                      </button>
+                {filteredBatches.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-xs text-gray-500">
+                      Belum ada data batch pembibitan (nursery). Silakan sinkronkan atau unggah berkas SHP.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredBatches.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-gray-900 dark:text-white">{item.varietas}</div>
+                        <div className="font-mono text-[11px] text-gray-500 dark:text-gray-400">{item.batch_id}</div>
+                        <div className="text-[10px] text-gray-400">{item.produsen_benih}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900 dark:text-white">{item.estate} • {item.afdeling}</div>
+                        <div className="text-[11px] text-gray-500">{item.region} ({item.luas_area_ha} Ha)</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div>{item.tahap}</div>
+                        <div className="text-[11px] text-gray-500 font-medium">Umur {item.umur_bulan} Bulan ({item.bulan_semai})</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {item.bibit_hidup.toLocaleString("id-ID")}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                        {item.bibit_siap_salur.toLocaleString("id-ID")}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="font-medium text-gray-900 dark:text-white">{item.culling_rate_pct}%</span>
+                        <div className="text-[10px] text-gray-400">{item.bibit_afkir_culling.toLocaleString("id-ID")} pkk</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                          {item.sistem_irigasi}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${item.status === "Siap Salur ke Lapangan"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                            : item.status === "Pemeliharaan Rutin"
+                              ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                              : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                            }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBatch(item)}
+                          className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                          Detail
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+              )}
               </tbody>
             </table>
           </div>

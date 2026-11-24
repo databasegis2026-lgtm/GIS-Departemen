@@ -28,116 +28,7 @@ export interface TopographyBlock {
   status_kesesuaian_lahan: "Sesuai (S1)" | "Sesuai Bersyarat (S2)" | "Tidak Sesuai / HCV (N)";
 }
 
-const MOCK_TOPOGRAPHY: TopographyBlock[] = [
-  {
-    id: "topo-01",
-    blok: "A01",
-    estate: "BUM 1",
-    afdeling: "AFD 1",
-    region: "REGION 1",
-    luas_blok_ha: 25.0,
-    elevasi_min_m: 14,
-    elevasi_max_m: 22,
-    elevasi_rata_m: 17,
-    kelerengan_pct: 4.2,
-    kelas_lereng: "Datar (0° - 8°)",
-    sph_rekomendasi: 148,
-    rekomendasi_konservasi: "Pola tanam lurus standar 8.8m x 7.6m, parit drainase flatbed",
-    panjang_teras_kontur_m: 0,
-    jumlah_rorak_air: 12,
-    status_kesesuaian_lahan: "Sesuai (S1)",
-  },
-  {
-    id: "topo-02",
-    blok: "B04",
-    estate: "BUM 2",
-    afdeling: "AFD 4",
-    region: "REGION 1",
-    luas_blok_ha: 24.8,
-    elevasi_min_m: 26,
-    elevasi_max_m: 58,
-    elevasi_rata_m: 41,
-    kelerengan_pct: 18.5,
-    kelas_lereng: "Bergelombang (8° - 25°)",
-    sph_rekomendasi: 136,
-    rekomendasi_konservasi: "Wajib Teras Kontur bersambung lebar 3.5-4m, back slope 10°-15°, stop bund tiap 30m, pancang violle",
-    panjang_teras_kontur_m: 3450,
-    jumlah_rorak_air: 64,
-    status_kesesuaian_lahan: "Sesuai Bersyarat (S2)",
-  },
-  {
-    id: "topo-03",
-    blok: "C08",
-    estate: "BUM 5",
-    afdeling: "AFD 20",
-    region: "REGION 2",
-    luas_blok_ha: 25.2,
-    elevasi_min_m: 18,
-    elevasi_max_m: 34,
-    elevasi_rata_m: 25,
-    kelerengan_pct: 6.8,
-    kelas_lereng: "Datar (0° - 8°)",
-    sph_rekomendasi: 148,
-    rekomendasi_konservasi: "Pola tanam segitiga sama sisi, tapak timbun pada cekungan",
-    panjang_teras_kontur_m: 0,
-    jumlah_rorak_air: 18,
-    status_kesesuaian_lahan: "Sesuai (S1)",
-  },
-  {
-    id: "topo-04",
-    blok: "D11",
-    estate: "BUM 6",
-    afdeling: "AFD 24",
-    region: "REGION 2",
-    luas_blok_ha: 23.6,
-    elevasi_min_m: 45,
-    elevasi_max_m: 112,
-    elevasi_rata_m: 78,
-    kelerengan_pct: 22.4,
-    kelas_lereng: "Bergelombang (8° - 25°)",
-    sph_rekomendasi: 136,
-    rekomendasi_konservasi: "Teras kontur bersambung, penanaman Mucuna bracteata intensif penahan longsor",
-    panjang_teras_kontur_m: 4120,
-    jumlah_rorak_air: 82,
-    status_kesesuaian_lahan: "Sesuai Bersyarat (S2)",
-  },
-  {
-    id: "topo-05",
-    blok: "E14",
-    estate: "BUM 7",
-    afdeling: "AFD 28",
-    region: "REGION 2",
-    luas_blok_ha: 18.2,
-    elevasi_min_m: 60,
-    elevasi_max_m: 148,
-    elevasi_rata_m: 115,
-    kelerengan_pct: 38.6,
-    kelas_lereng: "Curam (> 25°)",
-    sph_rekomendasi: 0,
-    rekomendasi_konservasi: "DILARANG DITANAM (Alokasi Kawasan Konservasi Tanah dan Air HCV)",
-    panjang_teras_kontur_m: 0,
-    jumlah_rorak_air: 0,
-    status_kesesuaian_lahan: "Tidak Sesuai / HCV (N)",
-  },
-  {
-    id: "topo-06",
-    blok: "F02",
-    estate: "BSL",
-    afdeling: "AFD 3",
-    region: "REGION 3",
-    luas_blok_ha: 24.5,
-    elevasi_min_m: 12,
-    elevasi_max_m: 24,
-    elevasi_rata_m: 18,
-    kelerengan_pct: 5.1,
-    kelas_lereng: "Datar (0° - 8°)",
-    sph_rekomendasi: 148,
-    rekomendasi_konservasi: "Pola tanam standar, pintu air dan kanal pengatur muka air tanah gambut",
-    panjang_teras_kontur_m: 0,
-    jumlah_rorak_air: 14,
-    status_kesesuaian_lahan: "Sesuai (S1)",
-  },
-];
+const MOCK_TOPOGRAPHY: TopographyBlock[] = [];
 
 export default function TopografiPage() {
   const [regionFilter, setRegionFilter] = useState<string>("Semua");
@@ -317,7 +208,14 @@ export default function TopografiPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
-                {filteredBlocks.map((item) => (
+                {filteredBlocks.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-xs text-gray-500">
+                      Belum ada data topografi & elevasi blok. Silakan unggah berkas SHP <code>Kontur</code> / DEM.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBlocks.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <td className="px-4 py-3">
                       <div className="font-bold text-gray-900 dark:text-white">Blok {item.blok}</div>
@@ -373,7 +271,8 @@ export default function TopografiPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                ))
+              )}
               </tbody>
             </table>
           </div>

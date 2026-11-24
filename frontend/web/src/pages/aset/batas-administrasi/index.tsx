@@ -26,360 +26,14 @@ export default function BatasAdministrasiPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  // 1. Data Batas Perusahaan: Region | REGIONAL | Koordinator | Luas | KH | Perusahaan | Id
-  const dataPerusahaan = useMemo(() => [
-    {
-      Region: "R1, R2, R3",
-      REGIONAL: "REGION 1, 2, 3",
-      Koordinator: "Ir. Hendra Gunawan",
-      Luas: 21500.0,
-      KH: "APL & Non-Kawasan",
-      Perusahaan: "PT Bangkitgiat Usaha Mandiri",
-      Id: "PT_BUM",
-    },
-    {
-      Region: "R3",
-      REGIONAL: "REGION 3",
-      Koordinator: "Agus Priyono, S.T.",
-      Luas: 4825.0,
-      KH: "APL",
-      Perusahaan: "Bangkitgiat Sawit Lestari (BSL)",
-      Id: "PT_BSL",
-    },
-  ], []);
-
-  // 2. Data Batas Region: Region | REGIONAL | KOOR_KASIE
-  const dataRegion = useMemo(() => [
-    {
-      Region: "R1",
-      REGIONAL: "REGION 1",
-      KOOR_KASIE: "Ir. Hendra Gunawan (BUM 1, BUM 2, BUM 4)",
-    },
-    {
-      Region: "R2",
-      REGIONAL: "REGION 2",
-      KOOR_KASIE: "Budi Santoso, S.P. (BUM 5, BUM 6, BUM 7)",
-    },
-    {
-      Region: "R3",
-      REGIONAL: "REGION 3",
-      KOOR_KASIE: "Agus Priyono, S.T. (BUM 3, BUM 8, BSL 1, BSL 2)",
-    },
-  ], []);
-
-  // 3. Data Batas Estate: Region | Estate | Luas | Kasie
-  const dataEstate = useMemo(() => [
-    { Region: "R1", Estate: "BUM 1", Luas: 2840.5, Kasie: "Bambang S." },
-    { Region: "R1", Estate: "BUM 2", Luas: 3450.2, Kasie: "Wahyu Haryono" },
-    { Region: "R1", Estate: "BUM 4", Luas: 2950.0, Kasie: "Dedi Kusuma" },
-    { Region: "R2", Estate: "BUM 5", Luas: 2620.4, Kasie: "Rudianto" },
-    { Region: "R2", Estate: "BUM 6", Luas: 2580.0, Kasie: "Sukardi" },
-    { Region: "R2", Estate: "BUM 7", Luas: 2650.0, Kasie: "Suparman" },
-    { Region: "R3", Estate: "BUM 3", Luas: 2810.0, Kasie: "Joko Widodo" },
-    { Region: "R3", Estate: "BUM 8", Luas: 3120.0, Kasie: "Anton Supriadi" },
-    { Region: "R3", Estate: "BSL", Luas: 4825.0, Kasie: "H. Ridwan Malik" },
-  ], []);
-
-  // 4. Data Batas AFD: Region | Estate | JSPV_1 | JSPV_2 | SPV | KASIE | AFD
-  const dataAfd = useMemo(() => [
-    {
-      Region: "R1",
-      Estate: "BUM 1",
-      JSPV_1: "Agus Triyono",
-      JSPV_2: "Slamet Riyadi",
-      SPV: "Suparmin, S.P.",
-      KASIE: "Bambang S.",
-      AFD: "AFD 1",
-    },
-    {
-      Region: "R1",
-      Estate: "BUM 1",
-      JSPV_1: "Herman Pelani",
-      JSPV_2: "Wawan Setiawan",
-      SPV: "M. Taufik",
-      KASIE: "Bambang S.",
-      AFD: "AFD 2",
-    },
-    {
-      Region: "R1",
-      Estate: "BUM 1",
-      JSPV_1: "Rudi Hermawan",
-      JSPV_2: "Eko Prasetyo",
-      SPV: "Indra Gunawan",
-      KASIE: "Bambang S.",
-      AFD: "AFD 3",
-    },
-    {
-      Region: "R1",
-      Estate: "BUM 1",
-      JSPV_1: "Nanang Sukirman",
-      JSPV_2: "Budi Utomo",
-      SPV: "Ahmad Fauzi",
-      KASIE: "Bambang S.",
-      AFD: "AFD 4",
-    },
-    {
-      Region: "R1",
-      Estate: "BUM 2",
-      JSPV_1: "Kuswanto",
-      JSPV_2: "Asep Sunandar",
-      SPV: "Darmawan",
-      KASIE: "Wahyu Haryono",
-      AFD: "AFD 5",
-    },
-    {
-      Region: "R2",
-      Estate: "BUM 5",
-      JSPV_1: "Aris Munandar",
-      JSPV_2: "Hariyanto",
-      SPV: "Budi Waluyo",
-      KASIE: "Rudianto",
-      AFD: "AFD 20",
-    },
-    {
-      Region: "R3",
-      Estate: "BSL",
-      JSPV_1: "M. Ramli",
-      JSPV_2: "Yusuf Kalla",
-      SPV: "Syamsuddin",
-      KASIE: "H. Ridwan Malik",
-      AFD: "AFD 1 (BSL)",
-    },
-  ], []);
-
-  // 5. Data Batas BLOK: Region | Estate | Afdeling | Blok | TahunTanam | Luas | TM_Pokok | JSPV_1 | JSPV_2 | SPV | KASIE | KOOR_KASIE | AFD
-  const dataBlok = useMemo(() => [
-    {
-      Region: "R1",
-      Estate: "BUM 1",
-      Afdeling: "AFD 1",
-      Blok: "A01",
-      TahunTanam: 2016,
-      Luas: 25.0,
-      TM_Pokok: 3603,
-      JSPV_1: "Agus Triyono",
-      JSPV_2: "Slamet Riyadi",
-      SPV: "Suparmin, S.P.",
-      KASIE: "Bambang S.",
-      KOOR_KASIE: "Ir. Hendra Gunawan",
-      AFD: "AFD 1",
-    },
-    {
-      Region: "R1",
-      Estate: "BUM 1",
-      Afdeling: "AFD 1",
-      Blok: "A02",
-      TahunTanam: 2016,
-      Luas: 25.0,
-      TM_Pokok: 3590,
-      JSPV_1: "Agus Triyono",
-      JSPV_2: "Slamet Riyadi",
-      SPV: "Suparmin, S.P.",
-      KASIE: "Bambang S.",
-      KOOR_KASIE: "Ir. Hendra Gunawan",
-      AFD: "AFD 1",
-    },
-    {
-      Region: "R1",
-      Estate: "BUM 1",
-      Afdeling: "AFD 2",
-      Blok: "B04",
-      TahunTanam: 2017,
-      Luas: 24.8,
-      TM_Pokok: 3560,
-      JSPV_1: "Herman Pelani",
-      JSPV_2: "Wawan Setiawan",
-      SPV: "M. Taufik",
-      KASIE: "Bambang S.",
-      KOOR_KASIE: "Ir. Hendra Gunawan",
-      AFD: "AFD 2",
-    },
-    {
-      Region: "R1",
-      Estate: "BUM 1",
-      Afdeling: "AFD 4",
-      Blok: "A05",
-      TahunTanam: 2015,
-      Luas: 24.2,
-      TM_Pokok: 3582,
-      JSPV_1: "Nanang Sukirman",
-      JSPV_2: "Budi Utomo",
-      SPV: "Ahmad Fauzi",
-      KASIE: "Bambang S.",
-      KOOR_KASIE: "Ir. Hendra Gunawan",
-      AFD: "AFD 4",
-    },
-    {
-      Region: "R2",
-      Estate: "BUM 5",
-      Afdeling: "AFD 20",
-      Blok: "C08",
-      TahunTanam: 2018,
-      Luas: 25.2,
-      TM_Pokok: 3620,
-      JSPV_1: "Aris Munandar",
-      JSPV_2: "Hariyanto",
-      SPV: "Budi Waluyo",
-      KASIE: "Rudianto",
-      KOOR_KASIE: "Budi Santoso, S.P.",
-      AFD: "AFD 20",
-    },
-    {
-      Region: "R3",
-      Estate: "BSL",
-      Afdeling: "AFD 1",
-      Blok: "F02",
-      TahunTanam: 2019,
-      Luas: 24.5,
-      TM_Pokok: 3520,
-      JSPV_1: "M. Ramli",
-      JSPV_2: "Yusuf Kalla",
-      SPV: "Syamsuddin",
-      KASIE: "H. Ridwan Malik",
-      KOOR_KASIE: "Agus Priyono, S.T.",
-      AFD: "AFD 1 (BSL)",
-    },
-  ], []);
-
-  // 6. Data Batas Warung: BLOK | AFD | ESTATE | REGION | luas | WARUNG | HARI | Drive_Wafd
-  const dataWarung = useMemo(() => [
-    {
-      BLOK: "A01",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 25.0,
-      WARUNG: "Merah",
-      HARI: "Senin",
-      Drive_Wafd: "WAFD_BUM1_01",
-    },
-    {
-      BLOK: "A02",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 25.0,
-      WARUNG: "Kuning",
-      HARI: "Selasa",
-      Drive_Wafd: "WAFD_BUM1_01",
-    },
-    {
-      BLOK: "A03",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 25.0,
-      WARUNG: "Hijau",
-      HARI: "Rabu",
-      Drive_Wafd: "WAFD_BUM1_01",
-    },
-    {
-      BLOK: "A04",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 25.0,
-      WARUNG: "Biru",
-      HARI: "Kamis",
-      Drive_Wafd: "WAFD_BUM1_01",
-    },
-    {
-      BLOK: "A05",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 24.2,
-      WARUNG: "Ungu",
-      HARI: "Jumat",
-      Drive_Wafd: "WAFD_BUM1_01",
-    },
-    {
-      BLOK: "A06",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 25.0,
-      WARUNG: "Abu-abu",
-      HARI: "Sabtu",
-      Drive_Wafd: "WAFD_BUM1_01",
-    },
-  ], []);
-
-  // 7. Data Batas Ancak: BLOK | AFD | ESTATE | REGION | luas | WARUNG | HARI | Drive_Wafd | BLOK_1 | AFD_1 | ESTATE_1 | REGION_1 | WARUNG_1 | HARI_1 | No_Ancak | Koord_X
-  const dataAncak = useMemo(() => [
-    {
-      BLOK: "A05",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 24.2,
-      WARUNG: "Ungu",
-      HARI: "Jumat",
-      Drive_Wafd: "WAFD_BUM1_01",
-      BLOK_1: "A05",
-      AFD_1: "AFD 1",
-      ESTATE_1: "BUM 1",
-      REGION_1: "R1",
-      WARUNG_1: "Ungu",
-      HARI_1: "Jumat",
-      No_Ancak: "ANC-01",
-      Koord_X: "721480.25",
-    },
-    {
-      BLOK: "A05",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 24.2,
-      WARUNG: "Ungu",
-      HARI: "Jumat",
-      Drive_Wafd: "WAFD_BUM1_01",
-      BLOK_1: "A05",
-      AFD_1: "AFD 1",
-      ESTATE_1: "BUM 1",
-      REGION_1: "R1",
-      WARUNG_1: "Ungu",
-      HARI_1: "Jumat",
-      No_Ancak: "ANC-02",
-      Koord_X: "721510.80",
-    },
-    {
-      BLOK: "A05",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 24.2,
-      WARUNG: "Ungu",
-      HARI: "Jumat",
-      Drive_Wafd: "WAFD_BUM1_01",
-      BLOK_1: "A05",
-      AFD_1: "AFD 1",
-      ESTATE_1: "BUM 1",
-      REGION_1: "R1",
-      WARUNG_1: "Ungu",
-      HARI_1: "Jumat",
-      No_Ancak: "ANC-03",
-      Koord_X: "721541.35",
-    },
-    {
-      BLOK: "A05",
-      AFD: "AFD 1",
-      ESTATE: "BUM 1",
-      REGION: "R1",
-      luas: 24.2,
-      WARUNG: "Ungu",
-      HARI: "Jumat",
-      Drive_Wafd: "WAFD_BUM1_01",
-      BLOK_1: "A05",
-      AFD_1: "AFD 1",
-      ESTATE_1: "BUM 1",
-      REGION_1: "R1",
-      WARUNG_1: "Ungu",
-      HARI_1: "Jumat",
-      No_Ancak: "ANC-32",
-      Koord_X: "722425.10",
-    },
-  ], []);
+  // Data State - Dimulai kosong (menunggu unggah SHP atau sinkronisasi database)
+  const [dataPerusahaan] = useState<any[]>([]);
+  const [dataRegion] = useState<any[]>([]);
+  const [dataEstate] = useState<any[]>([]);
+  const [dataAfd] = useState<any[]>([]);
+  const [dataBlok] = useState<any[]>([]);
+  const [dataWarung] = useState<any[]>([]);
+  const [dataAncak] = useState<any[]>([]);
 
   // Map active tab to current schema info
   const currentSchemaKey = useMemo(() => {
@@ -489,11 +143,10 @@ export default function BatasAdministrasiPage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors cursor-pointer ${
-                  isActive
-                    ? "bg-blue-600 text-white font-semibold shadow-xs"
-                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                }`}
+                className={`whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors cursor-pointer ${isActive
+                  ? "bg-blue-600 text-white font-semibold shadow-xs"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                  }`}
               >
                 {tab.label}
               </button>
@@ -545,19 +198,27 @@ export default function BatasAdministrasiPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {dataPerusahaan.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                  <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.Region}</td>
-                  <td className="px-3.5 py-2.5">{row.REGIONAL}</td>
-                  <td className="px-3.5 py-2.5">{row.Koordinator}</td>
-                  <td className="px-3 py-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                    {row.Luas.toLocaleString()} Ha
+              {dataPerusahaan.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                    Belum ada data Batas Perusahaan. Silakan unggah berkas SHP untuk memuat data.
                   </td>
-                  <td className="px-3.5 py-2.5">{row.KH}</td>
-                  <td className="px-3.5 py-2.5 font-sans font-medium text-gray-900 dark:text-white">{row.Perusahaan}</td>
-                  <td className="px-3.5 py-2.5 font-bold text-blue-600 dark:text-blue-400">{row.Id}</td>
                 </tr>
-              ))}
+              ) : (
+                dataPerusahaan.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                    <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.Region}</td>
+                    <td className="px-3.5 py-2.5">{row.REGIONAL}</td>
+                    <td className="px-3.5 py-2.5">{row.Koordinator}</td>
+                    <td className="px-3 py-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                      {row.Luas?.toLocaleString()} Ha
+                    </td>
+                    <td className="px-3.5 py-2.5">{row.KH}</td>
+                    <td className="px-3.5 py-2.5 font-sans font-medium text-gray-900 dark:text-white">{row.Perusahaan}</td>
+                    <td className="px-3.5 py-2.5 font-bold text-blue-600 dark:text-blue-400">{row.Id}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
@@ -573,13 +234,21 @@ export default function BatasAdministrasiPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {dataRegion.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                  <td className="px-3.5 py-2.5 font-bold text-blue-600 dark:text-blue-400">{row.Region}</td>
-                  <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.REGIONAL}</td>
-                  <td className="px-3.5 py-2.5 text-gray-700 dark:text-gray-300">{row.KOOR_KASIE}</td>
+              {dataRegion.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                    Belum ada data Batas Region. Silakan unggah berkas SHP untuk memuat data.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                dataRegion.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                    <td className="px-3.5 py-2.5 font-bold text-blue-600 dark:text-blue-400">{row.Region}</td>
+                    <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.REGIONAL}</td>
+                    <td className="px-3.5 py-2.5 text-gray-700 dark:text-gray-300">{row.KOOR_KASIE}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
@@ -596,16 +265,24 @@ export default function BatasAdministrasiPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {dataEstate.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                  <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.Region}</td>
-                  <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.Estate}</td>
-                  <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
-                    {row.Luas.toFixed(1)} Ha
+              {dataEstate.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                    Belum ada data Batas Estate. Silakan unggah berkas SHP untuk memuat data.
                   </td>
-                  <td className="px-3.5 py-2.5 text-gray-700 dark:text-gray-300">{row.Kasie}</td>
                 </tr>
-              ))}
+              ) : (
+                dataEstate.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                    <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.Region}</td>
+                    <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.Estate}</td>
+                    <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                      {row.Luas?.toFixed(1)} Ha
+                    </td>
+                    <td className="px-3.5 py-2.5 text-gray-700 dark:text-gray-300">{row.Kasie}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
@@ -625,17 +302,25 @@ export default function BatasAdministrasiPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {dataAfd.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                  <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.Region}</td>
-                  <td className="px-3.5 py-2.5 font-medium">{row.Estate}</td>
-                  <td className="px-3.5 py-2.5 text-gray-600 dark:text-gray-400">{row.JSPV_1}</td>
-                  <td className="px-3.5 py-2.5 text-gray-600 dark:text-gray-400">{row.JSPV_2}</td>
-                  <td className="px-3.5 py-2.5 font-medium text-gray-900 dark:text-white">{row.SPV}</td>
-                  <td className="px-3.5 py-2.5">{row.KASIE}</td>
-                  <td className="px-3.5 py-2.5 font-bold text-blue-600 dark:text-blue-400">{row.AFD}</td>
+              {dataAfd.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                    Belum ada data Batas Afdeling. Silakan unggah berkas SHP untuk memuat data.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                dataAfd.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                    <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.Region}</td>
+                    <td className="px-3.5 py-2.5 font-medium">{row.Estate}</td>
+                    <td className="px-3.5 py-2.5 text-gray-600 dark:text-gray-400">{row.JSPV_1}</td>
+                    <td className="px-3.5 py-2.5 text-gray-600 dark:text-gray-400">{row.JSPV_2}</td>
+                    <td className="px-3.5 py-2.5 font-medium text-gray-900 dark:text-white">{row.SPV}</td>
+                    <td className="px-3.5 py-2.5">{row.KASIE}</td>
+                    <td className="px-3.5 py-2.5 font-bold text-blue-600 dark:text-blue-400">{row.AFD}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
@@ -661,27 +346,35 @@ export default function BatasAdministrasiPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {dataBlok.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                  <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.Region}</td>
-                  <td className="px-3.5 py-2.5 font-medium">{row.Estate}</td>
-                  <td className="px-3.5 py-2.5">{row.Afdeling}</td>
-                  <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.Blok}</td>
-                  <td className="px-3 py-2.5 text-center">{row.TahunTanam}</td>
-                  <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
-                    {row.Luas.toFixed(1)} Ha
+              {dataBlok.length === 0 ? (
+                <tr>
+                  <td colSpan={13} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                    Belum ada data Batas Blok. Silakan unggah berkas SHP untuk memuat data.
                   </td>
-                  <td className="px-3 py-2.5 text-right font-bold text-gray-900 dark:text-white">
-                    {row.TM_Pokok.toLocaleString()}
-                  </td>
-                  <td className="px-3.5 py-2.5 text-gray-500 text-[11px]">{row.JSPV_1}</td>
-                  <td className="px-3.5 py-2.5 text-gray-500 text-[11px]">{row.JSPV_2}</td>
-                  <td className="px-3.5 py-2.5 text-gray-800 dark:text-gray-200">{row.SPV}</td>
-                  <td className="px-3.5 py-2.5 text-gray-700 dark:text-gray-300">{row.KASIE}</td>
-                  <td className="px-3.5 py-2.5 text-gray-500 text-[11px]">{row.KOOR_KASIE}</td>
-                  <td className="px-3.5 py-2.5 font-semibold text-blue-600 dark:text-blue-400">{row.AFD}</td>
                 </tr>
-              ))}
+              ) : (
+                dataBlok.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                    <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.Region}</td>
+                    <td className="px-3.5 py-2.5 font-medium">{row.Estate}</td>
+                    <td className="px-3.5 py-2.5">{row.Afdeling}</td>
+                    <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.Blok}</td>
+                    <td className="px-3 py-2.5 text-center">{row.TahunTanam}</td>
+                    <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                      {row.Luas?.toFixed(1)} Ha
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-bold text-gray-900 dark:text-white">
+                      {row.TM_Pokok?.toLocaleString()}
+                    </td>
+                    <td className="px-3.5 py-2.5 text-gray-500 text-[11px]">{row.JSPV_1}</td>
+                    <td className="px-3.5 py-2.5 text-gray-500 text-[11px]">{row.JSPV_2}</td>
+                    <td className="px-3.5 py-2.5 text-gray-800 dark:text-gray-200">{row.SPV}</td>
+                    <td className="px-3.5 py-2.5 text-gray-700 dark:text-gray-300">{row.KASIE}</td>
+                    <td className="px-3.5 py-2.5 text-gray-500 text-[11px]">{row.KOOR_KASIE}</td>
+                    <td className="px-3.5 py-2.5 font-semibold text-blue-600 dark:text-blue-400">{row.AFD}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
@@ -702,24 +395,32 @@ export default function BatasAdministrasiPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {dataWarung.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                  <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.BLOK}</td>
-                  <td className="px-3.5 py-2.5">{row.AFD}</td>
-                  <td className="px-3.5 py-2.5 font-medium">{row.ESTATE}</td>
-                  <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.REGION}</td>
-                  <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
-                    {row.luas.toFixed(1)} Ha
+              {dataWarung.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                    Belum ada data Batas Warung. Silakan unggah berkas SHP untuk memuat data.
                   </td>
-                  <td className="px-3.5 py-2.5">
-                    <span className="inline-block rounded px-2 py-0.5 text-[11px] font-bold border border-gray-300 dark:border-gray-700">
-                      {row.WARUNG}
-                    </span>
-                  </td>
-                  <td className="px-3.5 py-2.5 font-medium">{row.HARI}</td>
-                  <td className="px-3.5 py-2.5 text-gray-500">{row.Drive_Wafd}</td>
                 </tr>
-              ))}
+              ) : (
+                dataWarung.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                    <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.BLOK}</td>
+                    <td className="px-3.5 py-2.5">{row.AFD}</td>
+                    <td className="px-3.5 py-2.5 font-medium">{row.ESTATE}</td>
+                    <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.REGION}</td>
+                    <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                      {row.luas?.toFixed(1)} Ha
+                    </td>
+                    <td className="px-3.5 py-2.5">
+                      <span className="inline-block rounded px-2 py-0.5 text-[11px] font-bold border border-gray-300 dark:border-gray-700">
+                        {row.WARUNG}
+                      </span>
+                    </td>
+                    <td className="px-3.5 py-2.5 font-medium">{row.HARI}</td>
+                    <td className="px-3.5 py-2.5 text-gray-500">{row.Drive_Wafd}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
@@ -748,129 +449,137 @@ export default function BatasAdministrasiPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {dataAncak.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                  <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.BLOK}</td>
-                  <td className="px-3.5 py-2.5">{row.AFD}</td>
-                  <td className="px-3.5 py-2.5">{row.ESTATE}</td>
-                  <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.REGION}</td>
-                  <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400">{row.luas.toFixed(1)}</td>
-                  <td className="px-3.5 py-2.5">{row.WARUNG}</td>
-                  <td className="px-3.5 py-2.5">{row.HARI}</td>
-                  <td className="px-3.5 py-2.5 text-gray-500 text-[10px]">{row.Drive_Wafd}</td>
-                  <td className="px-3.5 py-2.5">{row.BLOK_1}</td>
-                  <td className="px-3.5 py-2.5">{row.AFD_1}</td>
-                  <td className="px-3.5 py-2.5">{row.ESTATE_1}</td>
-                  <td className="px-3.5 py-2.5">{row.REGION_1}</td>
-                  <td className="px-3.5 py-2.5">{row.WARUNG_1}</td>
-                  <td className="px-3.5 py-2.5">{row.HARI_1}</td>
-                  <td className="px-3.5 py-2.5 font-bold text-blue-600 dark:text-blue-400">{row.No_Ancak}</td>
-                  <td className="px-3.5 py-2.5 text-gray-600 dark:text-gray-400">{row.Koord_X}</td>
+              {dataAncak.length === 0 ? (
+                <tr>
+                  <td colSpan={16} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                    Belum ada data Batas Ancak. Silakan unggah berkas SHP untuk memuat data.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                dataAncak.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
+                    <td className="px-3.5 py-2.5 font-bold text-gray-900 dark:text-white">{row.BLOK}</td>
+                    <td className="px-3.5 py-2.5">{row.AFD}</td>
+                    <td className="px-3.5 py-2.5 font-medium">{row.ESTATE}</td>
+                    <td className="px-3.5 py-2.5 text-blue-600 dark:text-blue-400">{row.REGION}</td>
+                    <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400">{row.luas?.toFixed(1)}</td>
+                    <td className="px-3.5 py-2.5">{row.WARUNG}</td>
+                    <td className="px-3.5 py-2.5">{row.HARI}</td>
+                    <td className="px-3.5 py-2.5 text-gray-500 text-[10px]">{row.Drive_Wafd}</td>
+                    <td className="px-3.5 py-2.5">{row.BLOK_1}</td>
+                    <td className="px-3.5 py-2.5">{row.AFD_1}</td>
+                    <td className="px-3.5 py-2.5">{row.ESTATE_1}</td>
+                    <td className="px-3.5 py-2.5">{row.REGION_1}</td>
+                    <td className="px-3.5 py-2.5">{row.WARUNG_1}</td>
+                    <td className="px-3.5 py-2.5">{row.HARI_1}</td>
+                    <td className="px-3.5 py-2.5 font-bold text-blue-600 dark:text-blue-400">{row.No_Ancak}</td>
+                    <td className="px-3.5 py-2.5 text-gray-600 dark:text-gray-400">{row.Koord_X}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
       </section>
 
       {/* Dictionary Modal */}
-      {showDictionaryModal && (
-        <Dialog open={showDictionaryModal} onOpenChange={setShowDictionaryModal}>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Kamus Standar Kolom SHP Database WebGIS</DialogTitle>
-              <DialogDescription>
-                Daftar lengkap 18 layer shapefile master dengan susunan nama kolom resmi dibatasi tanda pipa (|)
-              </DialogDescription>
-            </DialogHeader>
+                              {showDictionaryModal && (
+                                <Dialog open={showDictionaryModal} onOpenChange={setShowDictionaryModal}>
+                                  <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle>Kamus Standar Kolom SHP Database WebGIS</DialogTitle>
+                                      <DialogDescription>
+                                        Daftar lengkap 18 layer shapefile master dengan susunan nama kolom resmi dibatasi tanda pipa (|)
+                                      </DialogDescription>
+                                    </DialogHeader>
 
-            <div className="space-y-4 py-2 text-xs">
-              {Object.entries(SHP_SCHEMA_DICTIONARY).map(([key, schema]) => (
-                <div key={key} className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-800/40">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-900 dark:text-white">
-                      {schema.nama} <span className="font-normal text-gray-500">({schema.kategori})</span>
-                    </span>
-                    <span className="font-mono text-[11px] text-blue-600 dark:text-blue-400">
-                      {schema.kolom.length} Kolom
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{schema.deskripsi}</p>
-                  <div className="mt-2 rounded border border-gray-200 bg-white p-2 font-mono text-[11px] text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 overflow-x-auto">
-                    {schema.kolom.join(" | ")}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+                                    <div className="space-y-4 py-2 text-xs">
+                                      {Object.entries(SHP_SCHEMA_DICTIONARY).map(([key, schema]) => (
+                                        <div key={key} className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-800/40">
+                                          <div className="flex items-center justify-between">
+                                            <span className="font-bold text-gray-900 dark:text-white">
+                                              {schema.nama} <span className="font-normal text-gray-500">({schema.kategori})</span>
+                                            </span>
+                                            <span className="font-mono text-[11px] text-blue-600 dark:text-blue-400">
+                                              {schema.kolom.length} Kolom
+                                            </span>
+                                          </div>
+                                          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{schema.deskripsi}</p>
+                                          <div className="mt-2 rounded border border-gray-200 bg-white p-2 font-mono text-[11px] text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 overflow-x-auto">
+                                            {schema.kolom.join(" | ")}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
 
-      {/* Upload SHP Modal */}
-      {showUploadModal && (
-        <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Unggah SHP Batas Administrasi ({currentSchema.nama})</DialogTitle>
-              <DialogDescription>
-                Sistem akan memvalidasi apakah kolom SHP/DBF persis memenuhi skema:
-                <br />
-                <code className="mt-1 block font-mono text-[10px] text-blue-600 dark:text-blue-400 overflow-x-auto">
-                  {currentSchema.kolom.join(" | ")}
-                </code>
-              </DialogDescription>
-            </DialogHeader>
+                              {/* Upload SHP Modal */}
+                              {showUploadModal && (
+                                <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+                                  <DialogContent className="max-w-md">
+                                    <DialogHeader>
+                                      <DialogTitle>Unggah SHP Batas Administrasi ({currentSchema.nama})</DialogTitle>
+                                      <DialogDescription>
+                                        Sistem akan memvalidasi apakah kolom SHP/DBF persis memenuhi skema:
+                                        <br />
+                                        <code className="mt-1 block font-mono text-[10px] text-blue-600 dark:text-blue-400 overflow-x-auto">
+                                          {currentSchema.kolom.join(" | ")}
+                                        </code>
+                                      </DialogDescription>
+                                    </DialogHeader>
 
-            <div className="space-y-4 py-2">
-              <div className="flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 dark:border-gray-700">
-                <div className="text-center">
-                  <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                    <label className="cursor-pointer font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                      Pilih berkas ZIP / SHP
-                      <input
-                        type="file"
-                        className="sr-only"
-                        accept=".zip,.shp"
-                        onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  </div>
-                  {uploadedFile && (
-                    <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
-                    </p>
-                  )}
-                </div>
-              </div>
+                                    <div className="space-y-4 py-2">
+                                      <div className="flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 dark:border-gray-700">
+                                        <div className="text-center">
+                                          <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                          </svg>
+                                          <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                                            <label className="cursor-pointer font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+                                              Pilih berkas ZIP / SHP
+                                              <input
+                                                type="file"
+                                                className="sr-only"
+                                                accept=".zip,.shp"
+                                                onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                                              />
+                                            </label>
+                                          </div>
+                                          {uploadedFile && (
+                                            <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                              {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
 
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowUploadModal(false)}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  disabled={!uploadedFile}
-                  onClick={() => {
-                    alert(`Validasi berhasil! Berkas SHP sesuai dengan skema kolom ${currentSchema.nama} (${currentSchema.kolom.join(" | ")})`);
-                    setShowUploadModal(false);
-                    setUploadedFile(null);
-                  }}
-                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  Validasi & Simpan
-                </button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
-  );
+                                      <div className="flex justify-end gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowUploadModal(false)}
+                                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                                        >
+                                          Batal
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={!uploadedFile}
+                                          onClick={() => {
+                                            alert(`Validasi berhasil! Berkas SHP sesuai dengan skema kolom ${currentSchema.nama} (${currentSchema.kolom.join(" | ")})`);
+                                            setShowUploadModal(false);
+                                            setUploadedFile(null);
+                                          }}
+                                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                                        >
+                                          Validasi & Simpan
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </div>
+                          );
 }

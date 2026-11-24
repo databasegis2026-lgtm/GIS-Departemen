@@ -28,152 +28,7 @@ export interface EmplasmentFacility {
   legal_status: "HGU Operasional" | "Enclave Fasum";
 }
 
-const MOCK_FACILITIES: EmplasmentFacility[] = [
-  {
-    id: "emp-01",
-    kode_aset: "EMP-BUM1-AFD1-01",
-    nama_objek: "Barak Karyawan G10 Blok Utama",
-    kategori: "Barak Karyawan",
-    tipe_bangunan: "Barak Papan G10 (10 Pintu)",
-    estate: "BUM 1",
-    afdeling: "AFD 1",
-    region: "REGION 1",
-    luas_lantai_m2: 450,
-    kapasitas_orang: 40,
-    kondisi_fisik: "Baik",
-    fasilitas_air_listrik: "Genset Afdeling 18:00-06:00 + Sumur Bor Filter",
-    koordinat_lat: -2.2541,
-    koordinat_lng: 112.5482,
-    tahun_dibangun: 2018,
-    legal_status: "HGU Operasional",
-  },
-  {
-    id: "emp-02",
-    kode_aset: "EMP-BUM1-EST-01",
-    nama_objek: "Kantor Central Estate & Ruang Data GIS BUM 1",
-    kategori: "Kantor & Workshop",
-    tipe_bangunan: "Gedung Permanen Beton Bertingkat",
-    estate: "BUM 1",
-    afdeling: "AFD Sentral",
-    region: "REGION 1",
-    luas_lantai_m2: 680,
-    kapasitas_orang: 35,
-    kondisi_fisik: "Sangat Baik",
-    fasilitas_air_listrik: "PLN 24 Jam + Backup Genset 50kVA + Starlink VSAT",
-    koordinat_lat: -2.251,
-    koordinat_lng: 112.5451,
-    tahun_dibangun: 2017,
-    legal_status: "HGU Operasional",
-  },
-  {
-    id: "emp-03",
-    kode_aset: "EMP-BUM1-TRX-02",
-    nama_objek: "Bengkel Sentral Traksi & Alat Berat (Heavy Equipment Workshop)",
-    kategori: "Gudang & Traksi",
-    tipe_bangunan: "Hanggar Baja Terbuka & Crane Hoist 5T",
-    estate: "BUM 1",
-    afdeling: "AFD Sentral",
-    region: "REGION 1",
-    luas_lantai_m2: 850,
-    kapasitas_orang: 20,
-    kondisi_fisik: "Baik",
-    fasilitas_air_listrik: "Kompresor 3 Phase, Oil Trap IPAL K3",
-    koordinat_lat: -2.2498,
-    koordinat_lng: 112.5435,
-    tahun_dibangun: 2019,
-    legal_status: "HGU Operasional",
-  },
-  {
-    id: "emp-04",
-    kode_aset: "EMP-BUM2-KLN-01",
-    nama_objek: "Poliklinik Pratama Kebun & Ruang Rawat Inap BUM 2",
-    kategori: "Fasilitas Sosial & Kesehatan",
-    tipe_bangunan: "Gedung Medis Permanen 4 Bed",
-    estate: "BUM 2",
-    afdeling: "AFD 6",
-    region: "REGION 1",
-    luas_lantai_m2: 320,
-    kapasitas_orang: 15,
-    kondisi_fisik: "Sangat Baik",
-    fasilitas_air_listrik: "Ambulans 4x4 Siaga, Ruang Farmasi Ber-AC",
-    koordinat_lat: -2.2811,
-    koordinat_lng: 112.5932,
-    tahun_dibangun: 2020,
-    legal_status: "HGU Operasional",
-  },
-  {
-    id: "emp-05",
-    kode_aset: "EMP-BUM5-GDG-03",
-    nama_objek: "Gudang Sentral Pupuk & Bahan Kimia B3 Estate BUM 5",
-    kategori: "Gudang & Traksi",
-    tipe_bangunan: "Gudang Beton Tahan Api Palletized",
-    estate: "BUM 5",
-    afdeling: "AFD 20",
-    region: "REGION 2",
-    luas_lantai_m2: 1200,
-    kapasitas_orang: 12,
-    kondisi_fisik: "Sangat Baik",
-    fasilitas_air_listrik: "Ventilasi Forced Air, Eye Washer, Spill Kit B3",
-    koordinat_lat: -2.3145,
-    koordinat_lng: 112.6712,
-    tahun_dibangun: 2021,
-    legal_status: "HGU Operasional",
-  },
-  {
-    id: "emp-06",
-    kode_aset: "EMP-BUM6-MSJ-01",
-    nama_objek: "Masjid Baiturrahman Emplasemen Sentral BUM 6",
-    kategori: "Fasilitas Sosial & Kesehatan",
-    tipe_bangunan: "Tempat Ibadah Permanen Kubah Enamel",
-    estate: "BUM 6",
-    afdeling: "AFD 24",
-    region: "REGION 2",
-    luas_lantai_m2: 380,
-    kapasitas_orang: 300,
-    kondisi_fisik: "Baik",
-    fasilitas_air_listrik: "Sound System Corong, Tempat Wudhu Air Mengalir",
-    koordinat_lat: -2.3392,
-    koordinat_lng: 112.7025,
-    tahun_dibangun: 2018,
-    legal_status: "Enclave Fasum",
-  },
-  {
-    id: "emp-07",
-    kode_aset: "EMP-BSL-HLP-01",
-    nama_objek: "Helipad Darurat & Evakuasi Medis Kebun BSL",
-    kategori: "Kantor & Workshop",
-    tipe_bangunan: "Tarmac Cor Beton Bertulang Marka 'H'",
-    estate: "BSL",
-    afdeling: "AFD 2",
-    region: "REGION 3",
-    luas_lantai_m2: 625,
-    kapasitas_orang: 0,
-    kondisi_fisik: "Baik",
-    fasilitas_air_listrik: "Windsock Penunjuk Arah Angin, Lampu Solar Cell",
-    koordinat_lat: -2.3912,
-    koordinat_lng: 112.7845,
-    tahun_dibangun: 2022,
-    legal_status: "HGU Operasional",
-  },
-  {
-    id: "emp-08",
-    kode_aset: "EMP-BUM3-RDN-02",
-    nama_objek: "Kompleks Rumah Dinas Staff Agronomi & Asisten",
-    kategori: "Rumah Dinas",
-    tipe_bangunan: "Kopel Tipe G2 Semi-Permanen",
-    estate: "BUM 3",
-    afdeling: "AFD 11",
-    region: "REGION 3",
-    luas_lantai_m2: 520,
-    kapasitas_orang: 24,
-    kondisi_fisik: "Perlu Renovasi",
-    fasilitas_air_listrik: "Genset Terpusat, Instalasi Air Pipa HDPE",
-    koordinat_lat: -2.2155,
-    koordinat_lng: 112.4821,
-    tahun_dibangun: 2015,
-    legal_status: "HGU Operasional",
-  },
-];
+const MOCK_FACILITIES: EmplasmentFacility[] = [];
 
 export default function EmplasmentPage() {
   const [regionFilter, setRegionFilter] = useState<string>("Semua");
@@ -379,53 +234,61 @@ export default function EmplasmentPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
-                {filteredFacilities.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 dark:text-white">{item.nama_objek}</div>
-                      <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400">{item.kode_aset}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>{item.kategori}</div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400">{item.tipe_bangunan}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 dark:text-white">{item.estate} • {item.afdeling}</div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400">{item.region}</div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {item.luas_lantai_m2.toLocaleString("id-ID")} m²
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {item.kapasitas_orang > 0 ? `${item.kapasitas_orang} Orang` : "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          item.kondisi_fisik === "Sangat Baik"
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                            : item.kondisi_fisik === "Baik"
-                            ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
-                            : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                        }`}
-                      >
-                        {item.kondisi_fisik}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 max-w-xs truncate text-[11px] text-gray-500 dark:text-gray-400">
-                      {item.fasilitas_air_listrik}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedFacility(item)}
-                        className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      >
-                        Detail & GPS
-                      </button>
+                {filteredFacilities.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-xs text-gray-500">
+                      Belum ada data fasilitas emplasemen. Silakan unggah berkas SHP <code>Perumahan.dbf</code> / <code>Implasement.dbf</code>.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredFacilities.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900 dark:text-white">{item.nama_objek}</div>
+                        <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400">{item.kode_aset}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div>{item.kategori}</div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">{item.tipe_bangunan}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900 dark:text-white">{item.estate} • {item.afdeling}</div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">{item.region}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {item.luas_lantai_m2.toLocaleString("id-ID")} m²
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {item.kapasitas_orang > 0 ? `${item.kapasitas_orang} Orang` : "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            item.kondisi_fisik === "Sangat Baik"
+                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              : item.kondisi_fisik === "Baik"
+                              ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                              : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                          }`}
+                        >
+                          {item.kondisi_fisik}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 max-w-xs truncate text-[11px] text-gray-500 dark:text-gray-400">
+                        {item.fasilitas_air_listrik}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedFacility(item)}
+                          className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                          Detail & GPS
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

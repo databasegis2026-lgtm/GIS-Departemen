@@ -25,113 +25,7 @@ export interface RiverSegment {
   status_lindung: "Kawasan Konservasi Riparian (HCV)" | "Buffer Lindung Terpancang";
 }
 
-const MOCK_RIVERS: RiverSegment[] = [
-  {
-    id: "riv-01",
-    id_sungai: "SG-SMP-01",
-    nama_sungai: "Sungai Sampit (Segmen Hilir)",
-    tipe_aliran: "Sungai Utama",
-    estate_lintasan: "BUM 1, BUM 2",
-    region: "REGION 1",
-    lebar_sungai_m: 65,
-    buffer_wajib_m: 100,
-    total_panjang_km: 18.4,
-    luas_buffer_ha: 368.0,
-    titik_jembatan_cross: 3,
-    debit_kategori: "Kapasitas Tinggi",
-    status_lindung: "Kawasan Konservasi Riparian (HCV)",
-  },
-  {
-    id: "riv-02",
-    id_sungai: "SG-MTY-02",
-    nama_sungai: "Sungai Mentaya (Koridor Barat)",
-    tipe_aliran: "Sungai Utama",
-    estate_lintasan: "BUM 4",
-    region: "REGION 1",
-    lebar_sungai_m: 85,
-    buffer_wajib_m: 100,
-    total_panjang_km: 14.2,
-    luas_buffer_ha: 284.0,
-    titik_jembatan_cross: 2,
-    debit_kategori: "Kapasitas Tinggi",
-    status_lindung: "Kawasan Konservasi Riparian (HCV)",
-  },
-  {
-    id: "riv-03",
-    id_sungai: "SG-CPG-03",
-    nama_sungai: "Sungai Cempaga",
-    tipe_aliran: "Sungai Utama",
-    estate_lintasan: "BUM 5, BUM 6",
-    region: "REGION 2",
-    lebar_sungai_m: 45,
-    buffer_wajib_m: 100,
-    total_panjang_km: 22.1,
-    luas_buffer_ha: 442.0,
-    titik_jembatan_cross: 4,
-    debit_kategori: "Kapasitas Tinggi",
-    status_lindung: "Kawasan Konservasi Riparian (HCV)",
-  },
-  {
-    id: "riv-04",
-    id_sungai: "SG-ANK-BUM5-01",
-    nama_sungai: "Anak Sungai Cempaga Kiri",
-    tipe_aliran: "Anak Sungai",
-    estate_lintasan: "BUM 5",
-    region: "REGION 2",
-    lebar_sungai_m: 12,
-    buffer_wajib_m: 50,
-    total_panjang_km: 8.6,
-    luas_buffer_ha: 86.0,
-    titik_jembatan_cross: 2,
-    debit_kategori: "Kapasitas Sedang",
-    status_lindung: "Buffer Lindung Terpancang",
-  },
-  {
-    id: "riv-05",
-    id_sungai: "SG-SRN-05",
-    nama_sungai: "Sungai Seranau",
-    tipe_aliran: "Sungai Utama",
-    estate_lintasan: "BUM 7",
-    region: "REGION 2",
-    lebar_sungai_m: 35,
-    buffer_wajib_m: 100,
-    total_panjang_km: 12.8,
-    luas_buffer_ha: 256.0,
-    titik_jembatan_cross: 1,
-    debit_kategori: "Kapasitas Sedang",
-    status_lindung: "Kawasan Konservasi Riparian (HCV)",
-  },
-  {
-    id: "riv-06",
-    id_sungai: "SG-BSL-ANK-01",
-    nama_sungai: "Anak Sungai Lenggana",
-    tipe_aliran: "Anak Sungai",
-    estate_lintasan: "BSL",
-    region: "REGION 3",
-    lebar_sungai_m: 15,
-    buffer_wajib_m: 50,
-    total_panjang_km: 11.5,
-    luas_buffer_ha: 115.0,
-    titik_jembatan_cross: 3,
-    debit_kategori: "Musiman (Pasang-Surut)",
-    status_lindung: "Buffer Lindung Terpancang",
-  },
-  {
-    id: "riv-07",
-    id_sungai: "SG-BUM3-PRT-02",
-    nama_sungai: "Alur Air Alami Rawa Gambut",
-    tipe_aliran: "Parit Alami Primer",
-    estate_lintasan: "BUM 3",
-    region: "REGION 3",
-    lebar_sungai_m: 8,
-    buffer_wajib_m: 50,
-    total_panjang_km: 6.2,
-    luas_buffer_ha: 62.0,
-    titik_jembatan_cross: 2,
-    debit_kategori: "Musiman (Pasang-Surut)",
-    status_lindung: "Buffer Lindung Terpancang",
-  },
-];
+const MOCK_RIVERS: RiverSegment[] = [];
 
 export default function SungaiPage() {
   const [regionFilter, setRegionFilter] = useState<string>("Semua");
@@ -315,7 +209,14 @@ export default function SungaiPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
-                {filteredRivers.map((item) => (
+                {filteredRivers.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-xs text-gray-500">
+                      Belum ada data segmen sungai & alur air. Silakan unggah berkas SHP <code>Sungai</code>.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRivers.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <td className="px-4 py-3">
                       <div className="font-semibold text-gray-900 dark:text-white">{item.nama_sungai}</div>
@@ -361,7 +262,8 @@ export default function SungaiPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                ))
+              )}
               </tbody>
             </table>
           </div>

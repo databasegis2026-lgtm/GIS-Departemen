@@ -66,15 +66,7 @@ interface TPHPoint {
   keterangan: string;
 }
 
-const INITIAL_TPH_LIST: TPHPoint[] = [
-  { id: "tph-01", name: "TPH-01", coords: [-1.545, 113.965], keterangan: "Ujung Barat Laut Jalur Utama" },
-  { id: "tph-02", name: "TPH-02", coords: [-1.545, 113.970], keterangan: "Tengah Utara Jalur Rintis 1" },
-  { id: "tph-03", name: "TPH-03", coords: [-1.545, 113.975], keterangan: "Ujung Timur Laut Jalur MR" },
-  { id: "tph-04", name: "TPH-04", coords: [-1.550, 113.975], keterangan: "Sisi Timur Jalur Koleksi" },
-  { id: "tph-05", name: "TPH-05", coords: [-1.555, 113.975], keterangan: "Ujung Tenggara Jalur MR" },
-  { id: "tph-06", name: "TPH-06", coords: [-1.555, 113.970], keterangan: "Tengah Selatan Jalur Rintis 2" },
-  { id: "tph-07", name: "TPH-07", coords: [-1.555, 113.965], keterangan: "Ujung Barat Daya Jalur Utama" },
-];
+const INITIAL_TPH_LIST: TPHPoint[] = [];
 
 export type SpatialTool = "select" | "edit_atribut" | "cut" | "merge" | "measure";
 

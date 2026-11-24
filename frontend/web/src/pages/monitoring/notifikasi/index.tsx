@@ -22,68 +22,7 @@ export interface SystemNotification {
   dibaca: boolean;
 }
 
-const MOCK_NOTIFICATIONS: SystemNotification[] = [
-  {
-    id: "notif-01",
-    waktu: "10 menit yang lalu",
-    judul: "Peringatan Prasyarat Pemupukan Blok A07",
-    kategori: "Kepatuhan Agronomi",
-    tingkat: "Kritis",
-    blok_terkait: "Blok A07",
-    estate: "BUM 1 (AFD 2)",
-    pesan: "Pengajuan pemupukan rotasi 1 ditolak otomatis oleh sistem: Blok A07 belum menyelesaikan sanitasi pelepah (Pruning) dan rintisan pasar pikul (RGM).",
-    rekomendasi: "Selesaikan pekerjaan Pruning (PRN) dan Pasar Pikul (PPL) terlebih dahulu sebelum mengajukan permintaan pupuk.",
-    dibaca: false,
-  },
-  {
-    id: "notif-02",
-    waktu: "1 jam yang lalu",
-    judul: "Pelanggaran Buffer Sempadan Sungai Mentaya",
-    kategori: "Batas Spasial & Topologi",
-    tingkat: "Kritis",
-    blok_terkait: "Blok C12",
-    estate: "BSL (AFD 2)",
-    pesan: "Tracking alat berat land clearing terdeteksi melewati batas buffer sempadan sungai 50m. Zona HCV terancam terdegradasi.",
-    rekomendasi: "Hentikan aktivitas alat berat pada radius 50m dari tepi sungai dan pasang patok pembatas warna merah.",
-    dibaca: false,
-  },
-  {
-    id: "notif-03",
-    waktu: "3 jam yang lalu",
-    judul: "Deviasi Luas Realisasi >105% (Overclaim)",
-    kategori: "Batas Spasial & Topologi",
-    tingkat: "Peringatan",
-    blok_terkait: "Blok D03",
-    estate: "BUM 5 (AFD 21)",
-    pesan: "Klaim realisasi fisik perbaikan jalan poros tercatat 26.8 Ha melampaui master blok 25.0 Ha (107.2%).",
-    rekomendasi: "Lakukan pengukuran ulang tracking GPS mandor infrastruktur untuk verifikasi luas aktual.",
-    dibaca: true,
-  },
-  {
-    id: "notif-04",
-    waktu: "Kemarin, 16:30 WIB",
-    judul: "Tiket Update Peta Melewati Target SLA",
-    kategori: "SLA Layanan GIS",
-    tingkat: "Peringatan",
-    blok_terkait: "Blok A11",
-    estate: "BUM 8 (AFD 33)",
-    pesan: "Tiket permohonan TKT-2026-02-004 belum selesai diverifikasi setelah melewati batas waktu standar 3 hari kerja.",
-    rekomendasi: "Hubungi PIC Admin GIS Region 3 (Iqbal Tri Junaidy) untuk percepatan verifikasi.",
-    dibaca: true,
-  },
-  {
-    id: "notif-05",
-    waktu: "22 Feb 2026",
-    judul: "Peta BAPP Pupuk Selesai Diterbitkan",
-    kategori: "Informasi Operasional",
-    tingkat: "Info",
-    blok_terkait: "Blok B01",
-    estate: "BUM 2 (AFD 6)",
-    pesan: "Peta resmi BAPP Pupuk Rotasi 1 nomor 1521/GIS-JKO/PRN/PBLK/R2-E/XI/2026 telah disahkan dan siap diunduh.",
-    rekomendasi: "Unduh file PDF resmi pada modul Request Update Peta untuk arsip penagihan.",
-    dibaca: true,
-  },
-];
+const MOCK_NOTIFICATIONS: SystemNotification[] = [];
 
 export default function NotifikasiPage() {
   const [notifications, setNotifications] = useState<SystemNotification[]>(MOCK_NOTIFICATIONS);

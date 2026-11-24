@@ -32,27 +32,7 @@ import {
 import type { CalendarEvent, EventFormData } from "./types";
 import CalendarViewSelect from "./view-selector";
 
-const INITIAL_EVENTS: CalendarEvent[] = [
-  {
-    id: "1",
-    title: "Event Conf.",
-    start: new Date().toISOString().split("T")[0],
-    extendedProps: { calendar: "Danger" },
-  },
-  {
-    id: "2",
-    title: "Meeting",
-    start: new Date(Date.now() + 86400000).toISOString().split("T")[0],
-    extendedProps: { calendar: "Success" },
-  },
-  {
-    id: "3",
-    title: "Workshop",
-    start: new Date(Date.now() + 172800000).toISOString().split("T")[0],
-    end: new Date(Date.now() + 259200000).toISOString().split("T")[0],
-    extendedProps: { calendar: "Primary" },
-  },
-];
+const INITIAL_EVENTS: CalendarEvent[] = [];
 
 export default function Calendar() {
   const locale = useLocale();
@@ -140,12 +120,12 @@ export default function Calendar() {
         prevEvents.map((ev) =>
           String(ev.id) === String(selectedEvent.id)
             ? {
-                ...ev,
-                title: titleVal,
-                start: startDateVal,
-                end: endDateVal || startDateVal,
-                extendedProps: { calendar: levelVal },
-              }
+              ...ev,
+              title: titleVal,
+              start: startDateVal,
+              end: endDateVal || startDateVal,
+              extendedProps: { calendar: levelVal },
+            }
             : ev,
         ),
       );
@@ -318,9 +298,8 @@ export default function Calendar() {
                   : "px-1! py-2! sm:px-3! sm:py-3! md:px-5! md:py-4! text-xs! sm:text-sm! font-medium! text-gray-400 uppercase",
               dayCellClass: (data: DayCellInfo) => {
                 if (data.inPopover) return "bg-transparent! p-3!";
-                return `bg-transparent! p-1! sm:p-2! ${
-                  data.isToday ? "bg-gray-100! dark:bg-gray-800/40!" : ""
-                }`;
+                return `bg-transparent! p-1! sm:p-2! ${data.isToday ? "bg-gray-100! dark:bg-gray-800/40!" : ""
+                  }`;
               },
               dayCellTopInnerClass:
                 "text-xs! sm:text-sm! text-gray-700 dark:text-gray-300",
@@ -364,10 +343,10 @@ export default function Calendar() {
               rowMoreLinkInnerClass: isMobile ? "overflow-visible!" : "",
               moreLinkContent: isMobile
                 ? () => (
-                    <span>
-                      <BookmarkIcon className="size-4.5 text-brand-500 sm:size-5.5" />
-                    </span>
-                  )
+                  <span>
+                    <BookmarkIcon className="size-4.5 text-brand-500 sm:size-5.5" />
+                  </span>
+                )
                 : undefined,
               dayHeaderContent: (arg: DayHeaderInfo) => {
                 const weekday = new Intl.DateTimeFormat(locale, {
@@ -381,14 +360,12 @@ export default function Calendar() {
                 return `${weekday} - ${day}`;
               },
               dayHeaderClass: (data: DayHeaderInfo) =>
-                `border-0! bg-gray-50! dark:bg-gray-900! ${
-                  data.isToday ? "bg-gray-100/70! dark:bg-gray-800/60!" : ""
+                `border-0! bg-gray-50! dark:bg-gray-900! ${data.isToday ? "bg-gray-100/70! dark:bg-gray-800/60!" : ""
                 }`,
               dayHeaderInnerClass: (data: DayHeaderInfo) =>
-                `px-1.5! sm:px-3! py-2.5! sm:py-3.5! text-center! text-[11px]! sm:text-xs! font-medium! text-gray-500! uppercase! dark:text-gray-400! ${
-                  data.isToday
-                    ? "font-semibold! text-brand-500! dark:text-brand-400!"
-                    : ""
+                `px-1.5! sm:px-3! py-2.5! sm:py-3.5! text-center! text-[11px]! sm:text-xs! font-medium! text-gray-500! uppercase! dark:text-gray-400! ${data.isToday
+                  ? "font-semibold! text-brand-500! dark:text-brand-400!"
+                  : ""
                 }`,
               slotHeaderDividerClass:
                 "border-e! border-s-0! border-y-0! border-gray-200! dark:border-gray-800!",
@@ -396,10 +373,9 @@ export default function Calendar() {
                 "px-1.5! sm:px-3! py-1.5! sm:py-2! text-start! text-[11px]! sm:text-xs! font-medium! text-gray-400! dark:text-gray-500!",
               slotLaneClass: "border-gray-100! dark:border-gray-800/60!",
               dayLaneClass: (data: DayLaneInfo) =>
-                `border-gray-200! dark:border-gray-800! ${
-                  data.isToday
-                    ? "bg-brand-50/15! dark:bg-brand-500/[0.03]!"
-                    : ""
+                `border-gray-200! dark:border-gray-800! ${data.isToday
+                  ? "bg-brand-50/15! dark:bg-brand-500/[0.03]!"
+                  : ""
                 }`,
               allDayDividerClass:
                 "border-b! border-t-0! border-x-0! border-gray-200! p-0! bg-transparent! dark:border-gray-800!",
@@ -419,10 +395,10 @@ export default function Calendar() {
               rowMoreLinkInnerClass: isMobile ? "overflow-visible!" : "",
               moreLinkContent: isMobile
                 ? () => (
-                    <span>
-                      <BookmarkIcon className="size-4.5 text-brand-500 sm:size-5.5" />
-                    </span>
-                  )
+                  <span>
+                    <BookmarkIcon className="size-4.5 text-brand-500 sm:size-5.5" />
+                  </span>
+                )
                 : undefined,
               dayHeaderContent: (arg: DayHeaderInfo) => {
                 const weekday = new Intl.DateTimeFormat(locale, {
@@ -436,14 +412,12 @@ export default function Calendar() {
                 return `${weekday} - ${day}`;
               },
               dayHeaderClass: (data: DayHeaderInfo) =>
-                `border-0! bg-gray-50! dark:bg-gray-900! ${
-                  data.isToday ? "bg-gray-100/70! dark:bg-gray-800/60!" : ""
+                `border-0! bg-gray-50! dark:bg-gray-900! ${data.isToday ? "bg-gray-100/70! dark:bg-gray-800/60!" : ""
                 }`,
               dayHeaderInnerClass: (data: DayHeaderInfo) =>
-                `px-2! sm:px-4! py-2.5! sm:py-3.5! text-center! text-xs! font-medium! text-gray-500! uppercase! dark:text-gray-400! ${
-                  data.isToday
-                    ? "font-semibold! text-brand-500! dark:text-brand-400!"
-                    : ""
+                `px-2! sm:px-4! py-2.5! sm:py-3.5! text-center! text-xs! font-medium! text-gray-500! uppercase! dark:text-gray-400! ${data.isToday
+                  ? "font-semibold! text-brand-500! dark:text-brand-400!"
+                  : ""
                 }`,
               slotHeaderDividerClass:
                 "border-e! border-s-0! border-y-0! border-gray-200! dark:border-gray-800!",
@@ -451,10 +425,9 @@ export default function Calendar() {
                 "px-2! sm:px-3! py-1.5! sm:py-2! text-start! text-[11px]! sm:text-xs! font-medium! text-gray-400! dark:text-gray-500!",
               slotLaneClass: "border-gray-100! dark:border-gray-800/60!",
               dayLaneClass: (data: DayLaneInfo) =>
-                `border-gray-200! dark:border-gray-800! ${
-                  data.isToday
-                    ? "bg-brand-50/15! dark:bg-brand-500/[0.03]!"
-                    : ""
+                `border-gray-200! dark:border-gray-800! ${data.isToday
+                  ? "bg-brand-50/15! dark:bg-brand-500/[0.03]!"
+                  : ""
                 }`,
               allDayDividerClass:
                 "border-b! border-t-0! border-x-0! border-gray-200! p-0! bg-transparent! dark:border-gray-800!",

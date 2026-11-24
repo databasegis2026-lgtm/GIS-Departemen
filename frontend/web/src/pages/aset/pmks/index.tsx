@@ -18,38 +18,7 @@ export interface PalmOilMillFacility {
   koordinat: string;
 }
 
-const MOCK_PMKS: PalmOilMillFacility[] = [
-  {
-    id: "pmks-01",
-    kode_pmks: "PMKS-BUM-01",
-    nama_pmks: "Pabrik Kelapa Sawit Sentral BUM 2",
-    unit_estate: "BUM 2 (AFD 6)",
-    region: "REGION 1",
-    kapasitas_olah_ton_jam: 60,
-    jumlah_loading_ramp: 16,
-    kapasitas_tangki_cpo_ton: 10000,
-    jumlah_kolam_ipal: 6,
-    status_operasional: "Beroperasi Penuh",
-    sertifikasi: "ISPO & RSPO Certified",
-    tahun_komisioning: 2012,
-    koordinat: "2°14'22.4\"S 112°54'18.8\"E",
-  },
-  {
-    id: "pmks-02",
-    kode_pmks: "PMKS-BSL-01",
-    nama_pmks: "Pabrik Kelapa Sawit BSL Sembuluh",
-    unit_estate: "BSL (AFD 2)",
-    region: "REGION 3",
-    kapasitas_olah_ton_jam: 45,
-    jumlah_loading_ramp: 12,
-    kapasitas_tangki_cpo_ton: 6000,
-    jumlah_kolam_ipal: 5,
-    status_operasional: "Beroperasi Penuh",
-    sertifikasi: "ISPO Certified",
-    tahun_komisioning: 2018,
-    koordinat: "2°32'44.1\"S 112°41'05.2\"E",
-  },
-];
+const MOCK_PMKS: PalmOilMillFacility[] = [];
 
 export default function PMKSPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -130,7 +99,12 @@ export default function PMKSPage() {
 
       {/* Grid PMKS */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {filteredPMKS.map((item) => (
+        {filteredPMKS.length === 0 ? (
+          <div className="col-span-full rounded-xl border border-gray-200 bg-white p-8 text-center text-xs text-gray-500 dark:border-gray-800 dark:bg-gray-900">
+            Belum ada data fasilitas pabrik (PMKS). Silakan sinkronkan data atau unggah berkas SHP.
+          </div>
+        ) : (
+          filteredPMKS.map((item) => (
           <div key={item.id} className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs space-y-3">
             <div className="flex items-start justify-between">
               <div>
@@ -166,7 +140,8 @@ export default function PMKSPage() {
               <span className="font-mono text-gray-400">{item.koordinat}</span>
             </div>
           </div>
-        ))}
+        ))
+      )}
       </section>
     </div>
   );

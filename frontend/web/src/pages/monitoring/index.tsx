@@ -52,194 +52,11 @@ export interface GisStaffPerformance {
   akurasi_topologi_pct: number;
 }
 
-const MOCK_EARLY_WARNINGS: EarlyWarningItem[] = [
-  {
-    id: "ew-01",
-    blok: "A07",
-    region: "REGION 1",
-    estate: "BUM 1",
-    afdeling: "AFD 2",
-    jenis_anomali: "Prasyarat Agronomi Melanggar Aturan",
-    tingkat: "Kritis",
-    tingkat_key: "critical",
-    pekerjaan_terkait: "Pemupukan Rotasi 1",
-    pesan_validasi: "Blok berstatus: BELUM PRUNING DAN RGM (TIDAK SIAP PUPUK). Sistem melarang aplikasi pupuk sebelum sanitasi pelepah songgo dan pasar pikul selesai.",
-    rekomendasi_tindakan: "Tunda jadwal pemupukan. Prioritaskan penugasan mandor pruning (PRN) dan rintisan pasar pikul (PPL).",
-    status: "Belum Ditindaklanjuti",
-    tanggal_terdeteksi: "24 Feb 2026, 08:30 WIB",
-  },
-  {
-    id: "ew-02",
-    blok: "C12",
-    region: "REGION 3",
-    estate: "BSL",
-    afdeling: "AFD 2",
-    jenis_anomali: "Tumpang Tindih Buffer Sempadan Sungai",
-    tingkat: "Kritis",
-    tingkat_key: "critical",
-    pekerjaan_terkait: "Land Clearing (LC)",
-    pesan_validasi: "Batas poligon pekerjaan terdeteksi memasuki sempadan sungai selebar 50m (Anak Sungai Mentaya). Pelanggaran kriteria HCV/Konservasi.",
-    rekomendasi_tindakan: "Lakukan revisi batas spasial SHP. Pasang patok pancang batas larangan LC di lapangan.",
-    status: "Sedang Diverifikasi",
-    tanggal_terdeteksi: "23 Feb 2026, 14:15 WIB",
-  },
-  {
-    id: "ew-03",
-    blok: "D03",
-    region: "REGION 2",
-    estate: "BUM 5",
-    afdeling: "AFD 21",
-    jenis_anomali: "Realisasi Luas Melebihi Toleransi (>105%)",
-    tingkat: "Peringatan",
-    tingkat_key: "warning",
-    pekerjaan_terkait: "Infrastruktur Trase Jalan Poros",
-    pesan_validasi: "Klaim realisasi luas fisik terdeteksi 26.8 Ha (107.2% dari luas master blok 25.0 Ha). Melebihi batas toleransi kebun maksimal 105%.",
-    rekomendasi_tindakan: "Tim GIS JKO wajib melakukan verifikasi ulang koordinat GPS handheld mandor.",
-    status: "Sedang Diverifikasi",
-    tanggal_terdeteksi: "22 Feb 2026, 16:45 WIB",
-  },
-  {
-    id: "ew-04",
-    blok: "B01",
-    region: "REGION 1",
-    estate: "BUM 2",
-    afdeling: "AFD 6",
-    jenis_anomali: "SPH Sensus Berdeviasi dari Standar Baku",
-    tingkat: "Informasi",
-    tingkat_key: "info",
-    pekerjaan_terkait: "Sensus Pokok Sawit",
-    pesan_validasi: "SPH tercatat 141 Pokok/Ha pada kontur datar (Standar baku ideal: 148 Pokok/Ha). Terdapat 175 titik sisipan belum tertanam.",
-    rekomendasi_tindakan: "Rencanakan pengajuan bibit sisipan dari Main Nursery untuk rotasi tanam mendatang.",
-    status: "Terselesaikan",
-    tanggal_terdeteksi: "20 Feb 2026, 11:20 WIB",
-  },
-];
+const MOCK_EARLY_WARNINGS: EarlyWarningItem[] = [];
 
-const MOCK_AUDIT_LOGS: AuditLogItem[] = [
-  {
-    id: "log-01",
-    waktu: "24 Feb 2026, 13:45",
-    pengguna: "Agus Adi Permana",
-    peran: "Admin GIS (Kode G)",
-    aktivitas: "Digitasi Pemotongan Poligon",
-    entitas: "Blok A05 • BUM 1 (AFD 4)",
-    detail_perubahan: "Pemotongan trase jalan poros (buffer MR 8m) dan koreksi batas gawangan kebun.",
-    ip_address: "192.168.10.45",
-  },
-  {
-    id: "log-02",
-    waktu: "24 Feb 2026, 11:10",
-    pengguna: "Hendra Wijaya",
-    peran: "Asisten Kebun (BUM 1)",
-    aktivitas: "Pengajuan Tiket Request Peta",
-    entitas: "TKT-2026-02-001",
-    detail_perubahan: "Upload dokumen acuan sketsa_a05_pruning.pdf untuk verifikasi luas netto.",
-    ip_address: "10.20.4.12",
-  },
-  {
-    id: "log-03",
-    waktu: "24 Feb 2026, 09:30",
-    pengguna: "Ari Setyo Wibowo",
-    peran: "Manager GIS (Kode A)",
-    aktivitas: "Penerbitan Peta Resmi A4",
-    entitas: "1521/GIS-JKO/PRN/PBLK/R2-E/XI/2026",
-    detail_perubahan: "Pengesahan kartografi cetak Peta BAPP Blok B01 Pupuk Rotasi 1.",
-    ip_address: "192.168.10.12",
-  },
-  {
-    id: "log-04",
-    waktu: "23 Feb 2026, 16:20",
-    pengguna: "Iqbal Tri Junaidy",
-    peran: "Admin GIS (Kode B)",
-    aktivitas: "Validasi Topologi Geodatabase",
-    entitas: "Blok C12 • BSL (AFD 2)",
-    detail_perubahan: "Pemeriksaan overlap buffer sempadan sungai 50m pada layer Land Clearing.",
-    ip_address: "192.168.10.38",
-  },
-  {
-    id: "log-05",
-    waktu: "23 Feb 2026, 14:05",
-    pengguna: "Bagja Arya Wiguna",
-    peran: "Admin GIS (Kode E)",
-    aktivitas: "Import Data Spasial Shapefile",
-    entitas: "Jalan_Poros_Hasil_Survey.shp",
-    detail_perubahan: "Pembaruan 19 koridor utama jaringan jalan poros Region 2.",
-    ip_address: "192.168.10.22",
-  },
-];
+const MOCK_AUDIT_LOGS: AuditLogItem[] = [];
 
-const MOCK_GIS_STAFF: GisStaffPerformance[] = [
-  {
-    kode: "A",
-    nama: "Ari Setyo Wibowo",
-    peran: "Manager GIS JKO",
-    region_utama: "Holding Sentral",
-    tiket_selesai: 48,
-    tiket_aktif: 2,
-    sla_rata_rata_hari: 1.2,
-    akurasi_topologi_pct: 99.8,
-  },
-  {
-    kode: "B",
-    nama: "Iqbal Tri Junaidy",
-    peran: "Admin GIS Operasional",
-    region_utama: "Region 3 (BSL, BUM 3, BUM 8)",
-    tiket_selesai: 36,
-    tiket_aktif: 4,
-    sla_rata_rata_hari: 1.8,
-    akurasi_topologi_pct: 98.9,
-  },
-  {
-    kode: "C",
-    nama: "Widodo Arif Rohman",
-    peran: "Admin GIS Database",
-    region_utama: "Region 3 (Kadastral & HGU)",
-    tiket_selesai: 29,
-    tiket_aktif: 3,
-    sla_rata_rata_hari: 2.1,
-    akurasi_topologi_pct: 99.2,
-  },
-  {
-    kode: "D",
-    nama: "Agung",
-    peran: "Admin GIS Drone & Survei",
-    region_utama: "Region 3 (Citra Drone)",
-    tiket_selesai: 31,
-    tiket_aktif: 2,
-    sla_rata_rata_hari: 1.6,
-    akurasi_topologi_pct: 98.5,
-  },
-  {
-    kode: "E",
-    nama: "Bagja Arya Wiguna",
-    peran: "Admin GIS Quality Assurance",
-    region_utama: "Region 2 (BUM 5, 6, 7)",
-    tiket_selesai: 42,
-    tiket_aktif: 3,
-    sla_rata_rata_hari: 1.5,
-    akurasi_topologi_pct: 99.5,
-  },
-  {
-    kode: "F",
-    nama: "Reki Hamdani",
-    peran: "Admin GIS Operasional Topografi",
-    region_utama: "Region 2 (Kontur 1m)",
-    tiket_selesai: 34,
-    tiket_aktif: 3,
-    sla_rata_rata_hari: 1.9,
-    akurasi_topologi_pct: 98.7,
-  },
-  {
-    kode: "G",
-    nama: "Agus Adi Permana",
-    peran: "Admin GIS Pemetaan Lapangan",
-    region_utama: "Region 1 (BUM 1, 2, 4)",
-    tiket_selesai: 45,
-    tiket_aktif: 2,
-    sla_rata_rata_hari: 1.4,
-    akurasi_topologi_pct: 99.4,
-  },
-];
+const MOCK_GIS_STAFF: GisStaffPerformance[] = [];
 
 export default function MonitoringPage() {
   const [activeTab, setActiveTab] = useState<MonitoringTab>("early_warning");
@@ -414,19 +231,17 @@ export default function MonitoringPage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors cursor-pointer ${
-                  isActive
+                className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors cursor-pointer ${isActive
                     ? "bg-brand-500 text-white font-semibold shadow-xs"
                     : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                }`}
+                  }`}
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                    isActive
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${isActive
                       ? "bg-white/20 text-white"
                       : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-                  }`}
+                    }`}
                 >
                   {tab.badge}
                 </span>
@@ -515,13 +330,12 @@ export default function MonitoringPage() {
                   >
                     <td className="px-3.5 py-3">
                       <span
-                        className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                          item.tingkat_key === "critical"
+                        className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${item.tingkat_key === "critical"
                             ? "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50"
                             : item.tingkat_key === "warning"
                               ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50"
                               : "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50"
-                        }`}
+                          }`}
                       >
                         {item.tingkat}
                       </span>
@@ -556,13 +370,12 @@ export default function MonitoringPage() {
 
                     <td className="px-3 py-3">
                       <span
-                        className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                          item.status === "Terselesaikan"
+                        className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${item.status === "Terselesaikan"
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
                             : item.status === "Sedang Diverifikasi"
                               ? "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300"
                               : "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300"
-                        }`}
+                          }`}
                       >
                         {item.status}
                       </span>

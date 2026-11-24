@@ -22,84 +22,7 @@ export interface PalmTreeCensus {
   tanggal_sensus_terakhir: string;
 }
 
-const MOCK_PALM_CENSUS: PalmTreeCensus[] = [
-  {
-    id: "pkk-01",
-    blok: "A05",
-    estate: "BUM 1",
-    afdeling: "AFD 4",
-    region: "REGION 1",
-    tahun_tanam: 2016,
-    status_tanaman: "TM (Tanaman Menghasilkan)",
-    varietas: "DxP Tenera Dami Mas",
-    luas_netto_ha: 24.2,
-    jumlah_pokok_sensus: 3582,
-    sph_aktual: 148.0,
-    sph_standar_baku: 148,
-    pokok_produktif: 3540,
-    pokok_abnormal: 24,
-    pokok_mati_sisipan: 18,
-    persentase_tegakan_pct: 99.4,
-    tanggal_sensus_terakhir: "15 Jan 2026",
-  },
-  {
-    id: "pkk-02",
-    blok: "B01",
-    estate: "BUM 2",
-    afdeling: "AFD 6",
-    region: "REGION 1",
-    tahun_tanam: 2017,
-    status_tanaman: "TM (Tanaman Menghasilkan)",
-    varietas: "DxP Marihat PPKS",
-    luas_netto_ha: 25.0,
-    jumlah_pokok_sensus: 3675,
-    sph_aktual: 147.0,
-    sph_standar_baku: 148,
-    pokok_produktif: 3610,
-    pokok_abnormal: 35,
-    pokok_mati_sisipan: 30,
-    persentase_tegakan_pct: 99.1,
-    tanggal_sensus_terakhir: "20 Jan 2026",
-  },
-  {
-    id: "pkk-03",
-    blok: "C12",
-    estate: "BSL",
-    afdeling: "AFD 2",
-    region: "REGION 3",
-    tahun_tanam: 2024,
-    status_tanaman: "TBM 2",
-    varietas: "DxP Socfindo",
-    luas_netto_ha: 18.5,
-    jumlah_pokok_sensus: 2738,
-    sph_aktual: 148.0,
-    sph_standar_baku: 148,
-    pokok_produktif: 2715,
-    pokok_abnormal: 12,
-    pokok_mati_sisipan: 11,
-    persentase_tegakan_pct: 99.5,
-    tanggal_sensus_terakhir: "05 Feb 2026",
-  },
-  {
-    id: "pkk-04",
-    blok: "E08",
-    estate: "BUM 6",
-    afdeling: "AFD 25",
-    region: "REGION 2",
-    tahun_tanam: 2025,
-    status_tanaman: "TBM 1",
-    varietas: "DxP Topaz",
-    luas_netto_ha: 24.8,
-    jumlah_pokok_sensus: 3372,
-    sph_aktual: 136.0,
-    sph_standar_baku: 136,
-    pokok_produktif: 3340,
-    pokok_abnormal: 18,
-    pokok_mati_sisipan: 14,
-    persentase_tegakan_pct: 99.2,
-    tanggal_sensus_terakhir: "12 Feb 2026",
-  },
-];
+const MOCK_PALM_CENSUS: PalmTreeCensus[] = [];
 
 export default function PokokSawitPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -220,7 +143,14 @@ export default function PokokSawitPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {filteredItems.map((item) => (
+            {filteredItems.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-8 text-center text-xs text-gray-500">
+                  Belum ada data sensus pokok sawit. Silakan sinkronkan data atau unggah berkas sensus.
+                </td>
+              </tr>
+            ) : (
+              filteredItems.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
                 <td className="px-3.5 py-3">
                   <div className="font-semibold text-gray-900 dark:text-white font-mono">Blok {item.blok}</div>
@@ -254,7 +184,8 @@ export default function PokokSawitPage() {
                   {item.tanggal_sensus_terakhir}
                 </td>
               </tr>
-            ))}
+            ))
+          )}
           </tbody>
         </table>
       </section>
