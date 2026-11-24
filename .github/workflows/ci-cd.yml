@@ -1,0 +1,96 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    name: Security scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        if: github.event_name == 'pull_request'
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          exit-code: '1'
+
+  infra-validation:
+    name: Infrastructure validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Validate Terraform when present
+        shell: bash
+        run: |
+          if find infra/terraform -name '*.tf' -print -quit | grep -q .; then
+            terraform -chdir=infra/terraform fmt -check -recursive
+            terraform -chdir=infra/terraform init -backend=false
+            terraform -chdir=infra/terraform validate
+          else
+            echo 'No Terraform files yet; validation scaffold is ready.'
+          fi
+      - name: Validate Kubernetes manifests when present
+        shell: bash
+        run: |
+          if find infra/kubernetes -type f \( -name '*.yaml' -o -name '*.yml' \) -print -quit | grep -q .; then
+            kubectl --dry-run=client --validate=true apply -f infra/kubernetes --recursive
+          else
+            echo 'No Kubernetes manifests yet; validation scaffold is ready.'
+          fi
+
+  test:
+    name: Testing stage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/web/package-lock.json
+      - run: npm ci
+        working-directory: frontend/web
+      - run: npm run lint
+        working-directory: frontend/web
+      - run: npm run build
+        working-directory: frontend/web
+
+  docker:
+    name: Build and push Docker image
+    needs: [security-scan, infra-validation, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Docker build context
+        id: context
+        shell: bash
+        run: |
+          if [ -f frontend/web/Dockerfile ]; then echo 'available=true' >> "$GITHUB_OUTPUT"; else echo 'available=false' >> "$GITHUB_OUTPUT"; fi
+      - uses: docker/login-action@v3
+        if: steps.context.outputs.available == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        if: steps.context.outputs.available == 'true'
+        with:
+          context: frontend/web
+          file: frontend/web/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/web:latest
+

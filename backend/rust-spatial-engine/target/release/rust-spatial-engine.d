@@ -1,0 +1,1 @@
+D:\Tamplate\ Web\ Admin\free-react-tailwind-admin-dashboard\backend\rust-spatial-engine\target\release\rust-spatial-engine.exe: D:\Tamplate\ Web\ Admin\free-react-tailwind-admin-dashboard\backend\rust-spatial-engine\src\main.rs

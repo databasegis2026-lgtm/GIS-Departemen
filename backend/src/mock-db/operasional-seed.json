@@ -1,0 +1,130 @@
+{
+  "estates": ["BUM 1", "BUM 2", "BUM 3"],
+  "afdelings": ["AFD 1", "AFD 2", "AFD 3", "AFD 4"],
+  "kondisiOptions": ["Semua", "BAPP", "Rotasi 2", "Rotasi 1", "Belum Semprot"],
+  "records": [
+    {
+      "id": "op-001",
+      "estate": "BUM 1",
+      "afdeling": "AFD 4",
+      "blok": "A05",
+      "komoditas": "Kelapa Sawit",
+      "luas_ha": 30.5,
+      "realisasi_luas_ha": 30.5,
+      "capaian_persen": 100,
+      "kondisi": "BAPP",
+      "kontraktor": "Mandor Budi Santoso",
+      "tanggal_kerja": "2026-11-18",
+      "polygon": [
+        [-1.545, 113.965],
+        [-1.545, 113.975],
+        [-1.555, 113.975],
+        [-1.555, 113.965]
+      ]
+    },
+    {
+      "id": "op-002",
+      "estate": "BUM 1",
+      "afdeling": "AFD 4",
+      "blok": "A01",
+      "komoditas": "Kelapa Sawit",
+      "luas_ha": 29.8,
+      "realisasi_luas_ha": 29.8,
+      "capaian_persen": 100,
+      "kondisi": "BAPP",
+      "kontraktor": "Mandor Joko Susilo",
+      "tanggal_kerja": "2026-11-17",
+      "polygon": [
+        [-1.533, 113.953],
+        [-1.533, 113.963],
+        [-1.543, 113.963],
+        [-1.543, 113.953]
+      ]
+    },
+    {
+      "id": "op-003",
+      "estate": "BUM 1",
+      "afdeling": "AFD 4",
+      "blok": "A02",
+      "komoditas": "Kelapa Sawit",
+      "luas_ha": 30.0,
+      "realisasi_luas_ha": 21.0,
+      "capaian_persen": 70,
+      "kondisi": "Rotasi 1",
+      "kontraktor": "Mandor Ahmad Yani",
+      "tanggal_kerja": "2026-11-16",
+      "polygon": [
+        [-1.533, 113.965],
+        [-1.533, 113.975],
+        [-1.543, 113.975],
+        [-1.543, 113.965]
+      ]
+    },
+    {
+      "id": "op-004",
+      "estate": "BUM 1",
+      "afdeling": "AFD 4",
+      "blok": "A03",
+      "komoditas": "Kelapa Sawit",
+      "luas_ha": 28.5,
+      "realisasi_luas_ha": 28.5,
+      "capaian_persen": 100,
+      "kondisi": "Rotasi 2",
+      "kontraktor": "Mandor Bambang Irawan",
+      "tanggal_kerja": "2026-11-15",
+      "polygon": [
+        [-1.533, 113.977],
+        [-1.533, 113.987],
+        [-1.543, 113.987],
+        [-1.543, 113.977]
+      ]
+    },
+    {
+      "id": "op-005",
+      "estate": "BUM 1",
+      "afdeling": "AFD 4",
+      "blok": "A04",
+      "komoditas": "Kelapa Sawit",
+      "luas_ha": 27.2,
+      "realisasi_luas_ha": 13.6,
+      "capaian_persen": 50,
+      "kondisi": "Belum Semprot",
+      "kontraktor": "Mandor Dani Prasetyo",
+      "tanggal_kerja": "2026-11-14",
+      "polygon": [
+        [-1.545, 113.953],
+        [-1.545, 113.963],
+        [-1.555, 113.963],
+        [-1.555, 113.953]
+      ]
+    },
+    {
+      "id": "op-006",
+      "estate": "BUM 1",
+      "afdeling": "AFD 4",
+      "blok": "A06",
+      "komoditas": "Kelapa Sawit",
+      "luas_ha": 31.4,
+      "realisasi_luas_ha": 31.4,
+      "capaian_persen": 100,
+      "kondisi": "BAPP",
+      "kontraktor": "Mandor Budi Santoso",
+      "tanggal_kerja": "2026-11-13",
+      "polygon": [
+        [-1.545, 113.977],
+        [-1.545, 113.987],
+        [-1.555, 113.987],
+        [-1.555, 113.977]
+      ]
+    }
+  ],
+  "tphPoints": [
+    { "id": "tph-1", "name": "TPH-01", "coords": [-1.545, 113.965] },
+    { "id": "tph-2", "name": "TPH-02", "coords": [-1.545, 113.97] },
+    { "id": "tph-3", "name": "TPH-03", "coords": [-1.545, 113.975] },
+    { "id": "tph-4", "name": "TPH-04", "coords": [-1.55, 113.975] },
+    { "id": "tph-5", "name": "TPH-05", "coords": [-1.555, 113.975] },
+    { "id": "tph-6", "name": "TPH-06", "coords": [-1.555, 113.97] },
+    { "id": "tph-7", "name": "TPH-07", "coords": [-1.555, 113.965] }
+  ]
+}

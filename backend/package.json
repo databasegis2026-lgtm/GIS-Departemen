@@ -1,0 +1,14 @@
+{
+  "name": "gis-dashboard-backend",
+  "version": "1.0.0",
+  "description": "Backend API Service for Plantation GIS Dashboard (Express.js + Mock Repository)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  }
+}
