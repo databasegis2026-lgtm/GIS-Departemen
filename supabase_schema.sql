@@ -286,10 +286,8 @@ alter table public.batas_afdeling enable row level security;
 alter table public.batas_warung enable row level security;
 alter table public.batas_blok enable row level security;
 alter table public.batas_ancak enable row level security;
-alter table public.gis_users enable row level security;
 
 -- Izinkan Akses Baca & Tulis Penuh untuk API Anonim & Otentikasi
--- Kebijakan Akses API
 drop policy if exists "Allow all operations for anon" on public.user_roles;
 create policy "Allow all operations for anon" on public.user_roles for all using (true) with check (true);
 
@@ -319,13 +317,9 @@ create policy "Allow all operations for anon" on public.batas_blok for all using
 
 drop policy if exists "Allow all operations for anon" on public.batas_ancak;
 create policy "Allow all operations for anon" on public.batas_ancak for all using (true) with check (true);
-create policy "Allow all operations for anon" on public.gis_users for all using (true) with check (true);
-create policy "Allow all operations for anon" on public.batas_estate for all using (true) with check (true);
-create policy "Allow all operations for anon" on public.batas_afdeling for all using (true) with check (true);
-create policy "Allow all operations for anon" on public.batas_warung for all using (true) with check (true);
-create policy "Allow all operations for anon" on public.batas_blok for all using (true) with check (true);
-create policy "Allow all operations for anon" on public.batas_ancak for all using (true) with check (true);
 
+grant all on public.user_roles to anon, authenticated;
+grant all on public.gis_users to anon, authenticated;
 grant all on public.gis_audit_logs to anon, authenticated;
 grant all on public.batas_perusahaan to anon, authenticated;
 grant all on public.batas_region to anon, authenticated;
