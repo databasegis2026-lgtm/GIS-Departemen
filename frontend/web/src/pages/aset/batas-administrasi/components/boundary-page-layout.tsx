@@ -85,6 +85,7 @@ export default function BoundaryPageLayout({
     sizeStr: string;
     fileName: string;
     savedToDb: number;
+    dbError?: string;
   } | null>(null);
 
   const [mapModalOpen, setMapModalOpen] = useState(false);
@@ -105,34 +106,41 @@ export default function BoundaryPageLayout({
   }, [data, searchQuery]);
 
   // Helper untuk membersihkan dan menyesuaikan tipe data payload sebelum dikirim ke database
+  // Hanya kolom yang terdaftar di `columns`, `id`, dan `coordinates` yang diizinkan masuk ke database.
+  // Kolom acak lain dari DBF / SHP akan disaring agar tidak menyebabkan PGRST204 (column not found).
   const sanitizeRecordForDb = (record: Record<string, any>) => {
     const clean: Record<string, any> = {};
-    for (const [key, value] of Object.entries(record)) {
-      if (key === "coordinates") {
-        // Biarkan coordinates apa adanya jika valid array
-        if (Array.isArray(value) && value.length > 0) {
-          clean[key] = value;
-        }
-        continue;
-      }
+
+    // 1. Pastikan id ada
+    clean.id = record.id || genUUID();
+
+    // 2. Simpan coordinates jika ada
+    if (Array.isArray(record.coordinates) && record.coordinates.length > 0) {
+      clean.coordinates = record.coordinates;
+    }
+
+    // 3. Hanya ambil kolom yang valid sesuai skema tabel halaman ini
+    for (const col of columns) {
+      const value = record[col];
 
       // Kolom numerik seperti Luas, luas, TM_Pokok
       const isNumericCol =
-        key.toLowerCase().includes("luas") ||
-        key.toLowerCase().includes("pokok") ||
-        key.toLowerCase().includes("tahuntanam");
+        col.toLowerCase().includes("luas") ||
+        col.toLowerCase().includes("pokok") ||
+        col.toLowerCase().includes("tahuntanam");
 
       if (isNumericCol) {
         if (value === "" || value === null || value === undefined || value === "-") {
-          clean[key] = null;
+          clean[col] = null;
         } else {
           const num = Number(String(value).replace(/,/g, "."));
-          clean[key] = isNaN(num) ? null : num;
+          clean[col] = isNaN(num) ? null : num;
         }
       } else {
-        clean[key] = value === "" ? null : value;
+        clean[col] = value === "" || value === undefined ? null : value;
       }
     }
+
     return clean;
   };
 
@@ -256,21 +264,28 @@ export default function BoundaryPageLayout({
   // Simpan batch records ke Supabase dan kembalikan jumlah yang berhasil
   const saveBatchToSupabase = async (
     records: Record<string, any>[]
-  ): Promise<number> => {
-    if (records.length === 0) return 0;
-    
-    // Sanitasi tiap record agar sesuai dengan skema tabel di Supabase
+  ): Promise<{ saved: number; errorMessage?: string }> => {
+    if (records.length === 0) return { saved: 0 };
+
+    // Sanitasi tiap record agar HANYA kolom baku tabel yang dikirim ke Supabase
     const dbRecords = records.map((r) => sanitizeRecordForDb(r));
 
     // Kirim batch per 50 record untuk hindari payload terlalu besar
     const BATCH = 50;
     let saved = 0;
+    let lastError = "";
+
     for (let i = 0; i < dbRecords.length; i += BATCH) {
       const chunk = dbRecords.slice(i, i + BATCH);
       const res = await supabase.from(tableName).insert(chunk);
-      if (!res.error) saved += chunk.length;
+      if (!res.error) {
+        saved += chunk.length;
+      } else {
+        console.error("Gagal simpan batch ke Supabase:", res.error);
+        lastError = res.error.message || JSON.stringify(res.error);
+      }
     }
-    return saved;
+    return { saved, errorMessage: lastError || undefined };
   };
 
   // Handle Upload SHP/GeoJSON
@@ -294,19 +309,21 @@ export default function BoundaryPageLayout({
       setUploadProgress(90);
       setUploadStage(`Menyimpan ${parsedRecords.length} record ke database Supabase...`);
 
-      const savedToDb = await saveBatchToSupabase(parsedRecords);
+      const { saved: savedToDb, errorMessage } = await saveBatchToSupabase(parsedRecords);
 
       // Refresh dari Supabase agar id konsisten dengan yang di DB
       const freshRes = await supabase.from(tableName).select("*");
       const finalData =
-        freshRes.data && Array.isArray(freshRes.data)
+        freshRes.data && Array.isArray(freshRes.data) && freshRes.data.length > 0
           ? freshRes.data
           : parsedRecords;
 
       setData(finalData);
       setUploadProgress(100);
       setUploadStage(
-        `Selesai! ${parsedRecords.length} poligon diekstrak, ${savedToDb} tersimpan di database.`
+        savedToDb > 0
+          ? `Selesai! ${parsedRecords.length} poligon diekstrak, ${savedToDb} tersimpan di database.`
+          : `Peringatan: ${parsedRecords.length} poligon diekstrak, tetapi gagal simpan ke DB: ${errorMessage || "Periksa log konsol"}`
       );
       setUploadSuccess(true);
       setImportedSummary({
@@ -314,13 +331,14 @@ export default function BoundaryPageLayout({
         sizeStr: sz,
         fileName: uploadedFile.name,
         savedToDb,
+        dbError: errorMessage,
       });
       supabase
         .logAudit({
           action: "UPLOAD",
           table_name: tableName,
           record_id: uploadedFile.name,
-          details: `Unggah ${levelName} (${uploadedFile.name}, ${sz}) — ${parsedRecords.length} poligon diekstrak, ${savedToDb} tersimpan DB`,
+          details: `Unggah ${levelName} (${uploadedFile.name}, ${sz}) — ${parsedRecords.length} poligon diekstrak, ${savedToDb} tersimpan DB${errorMessage ? ` (Error: ${errorMessage})` : ""}`,
         })
         .catch(() => {});
       setIsUploading(false);
@@ -744,9 +762,15 @@ export default function BoundaryPageLayout({
                     <span className="font-mono font-semibold">{importedSummary.fileName}</span>{" "}
                     ({importedSummary.sizeStr}).
                   </p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
-                    <b>{importedSummary.savedToDb} record</b> berhasil disimpan ke database Supabase.
-                  </p>
+                  {importedSummary.savedToDb > 0 ? (
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+                      ✅ <b>{importedSummary.savedToDb} record</b> berhasil disimpan ke database Supabase.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-amber-800 dark:text-amber-300 mt-1 bg-amber-50 dark:bg-amber-950/40 p-2 rounded border border-amber-200 dark:border-amber-900/50">
+                      ⚠️ <b>0 record tersimpan di database:</b> {importedSummary.dbError || "Periksa kesesuaian kolom SHP dengan skema tabel database."}
+                    </p>
+                  )}
                 </div>
                 <div className="flex justify-center gap-2 pt-2">
                   <button
