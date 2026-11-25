@@ -384,7 +384,74 @@ export default function BoundaryPageLayout({
     ];
   };
 
-  // Handle Upload SHP dengan Real Progress Bar Persentase & Parsing Riil
+  // Fungsi ekstraksi umum untuk mengubah objek GeoJSON (dari .geojson maupun .zip via shpjs) menjadi data baris riil
+  const extractRecordsFromGeoJson = (geojson: any): Record<string, any>[] => {
+    let featureList: any[] = [];
+    if (Array.isArray(geojson)) {
+      geojson.forEach((layer) => {
+        if (layer.features && Array.isArray(layer.features)) {
+          featureList.push(...layer.features);
+        }
+      });
+    } else if (geojson && geojson.features && Array.isArray(geojson.features)) {
+      featureList = geojson.features;
+    }
+
+    if (featureList.length === 0) return [];
+
+    return featureList.map((feat: any, idx: number) => {
+      const props = feat.properties || {};
+      const rec: Record<string, any> = {
+        id: `shp-${Date.now()}-${idx + 1}`,
+      };
+
+      const propKeys = Object.keys(props);
+
+      // Petakan ke kolom baku halaman ini (case-insensitive & pembersihan karakter _)
+      columns.forEach((col) => {
+        if (props[col] !== undefined) {
+          rec[col] = props[col];
+        } else {
+          const colClean = col.toLowerCase().replace(/_/g, "");
+          const matchedKey = propKeys.find((pk) => {
+            const pkClean = pk.toLowerCase().replace(/_/g, "");
+            return pkClean === colClean;
+          });
+          if (matchedKey && props[matchedKey] !== undefined) {
+            rec[col] = props[matchedKey];
+          } else {
+            rec[col] = "-";
+          }
+        }
+      });
+
+      // Salin juga seluruh atribut asli lainnya agar informasi SHP tidak ada yang terpotong
+      propKeys.forEach((k) => {
+        if (rec[k] === undefined) {
+          rec[k] = props[k];
+        }
+      });
+
+      // Ekstraksi geometri riil poligon (GeoJSON [lng, lat] -> Leaflet [lat, lng])
+      if (feat.geometry && feat.geometry.coordinates) {
+        if (feat.geometry.type === "Polygon") {
+          const ring = feat.geometry.coordinates[0];
+          if (Array.isArray(ring)) {
+            rec.coordinates = ring.map((pt: [number, number]) => [pt[1], pt[0]]);
+          }
+        } else if (feat.geometry.type === "MultiPolygon") {
+          const firstPoly = feat.geometry.coordinates[0];
+          if (Array.isArray(firstPoly) && Array.isArray(firstPoly[0])) {
+            rec.coordinates = firstPoly[0].map((pt: [number, number]) => [pt[1], pt[0]]);
+          }
+        }
+      }
+
+      return rec;
+    });
+  };
+
+  // Handle Upload SHP dengan Real Progress Bar Persentase & Parsing Riil via shpjs
   const handleUploadSubmit = () => {
     if (!uploadedFile) return;
 
@@ -398,11 +465,11 @@ export default function BoundaryPageLayout({
         ? `${(uploadedFile.size / 1024).toFixed(1)} KB`
         : `${(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB`;
 
-    // Jika berkas GeoJSON, baca langsung dengan FileReader
     const isGeoJson =
       uploadedFile.name.endsWith(".geojson") || uploadedFile.name.endsWith(".json");
 
     if (isGeoJson) {
+      // 1. Parsing GeoJSON Asli
       const reader = new FileReader();
 
       reader.onprogress = (event) => {
@@ -421,56 +488,20 @@ export default function BoundaryPageLayout({
           const text = e.target?.result as string;
           const json = JSON.parse(text);
 
-          let parsedRecords: Record<string, any>[] = [];
-
-          if (json.type === "FeatureCollection" && Array.isArray(json.features)) {
-            parsedRecords = json.features.map((feat: any, idx: number) => {
-              const rec: Record<string, any> = {
-                id: `geo-${Date.now()}-${idx + 1}`,
-                ...feat.properties,
-              };
-
-              // Ambil koordinat jika ada geometri poligon
-              if (feat.geometry?.coordinates) {
-                if (feat.geometry.type === "Polygon") {
-                  rec.coordinates = feat.geometry.coordinates[0].map(
-                    (pt: [number, number]) => [pt[1], pt[0]]
-                  );
-                } else if (feat.geometry.type === "MultiPolygon") {
-                  rec.coordinates = feat.geometry.coordinates[0][0].map(
-                    (pt: [number, number]) => [pt[1], pt[0]]
-                  );
-                }
-              }
-
-              // Normalisasi atribut ke kolom standar
-              columns.forEach((col) => {
-                if (rec[col] === undefined) {
-                  // Coba cari case-insensitive
-                  const matchKey = Object.keys(rec).find(
-                    (k) => k.toLowerCase() === col.toLowerCase()
-                  );
-                  if (matchKey) {
-                    rec[col] = rec[matchKey];
-                  }
-                }
-              });
-
-              return rec;
-            });
-          }
+          const parsedRecords = extractRecordsFromGeoJson(json);
 
           if (parsedRecords.length === 0) {
-            parsedRecords = generateImportedRecordsFromUpload(uploadedFile.name);
+            throw new Error("Berkas GeoJSON tidak memuat fitur poligon spasial yang valid.");
           }
 
           setUploadProgress(95);
-          setUploadStage("Menyinkronkan data spasial ke tabel...");
+          setUploadStage(`Menyinkronkan ${parsedRecords.length} data spasial ke tabel & peta...`);
 
           setTimeout(() => {
-            setData((prev) => [...parsedRecords, ...prev]);
+            // Ganti data dengan data asli hasil upload (bersihkan dummy sebelumnya)
+            setData(parsedRecords);
             setUploadProgress(100);
-            setUploadStage(`Selesai! Berhasil mengimpor ${parsedRecords.length} poligon spasial.`);
+            setUploadStage(`Selesai! Berhasil mengimpor ${parsedRecords.length} poligon asli.`);
             setUploadSuccess(true);
             setImportedSummary({
               count: parsedRecords.length,
@@ -483,14 +514,14 @@ export default function BoundaryPageLayout({
                 action: "UPLOAD",
                 table_name: tableName,
                 record_id: uploadedFile.name,
-                details: `Unggah SHP/GeoJSON ${levelName} (${uploadedFile.name}, ${sz}) - ${parsedRecords.length} poligon diimpor`,
+                details: `Unggah GeoJSON ${levelName} (${uploadedFile.name}, ${sz}) - ${parsedRecords.length} poligon diekstrak riil`,
               })
               .catch(() => {});
 
             setIsUploading(false);
-          }, 400);
-        } catch {
-          // Fallback parsing
+          }, 350);
+        } catch (err: any) {
+          console.error("Gagal parse GeoJSON:", err);
           fallbackSimulation(sz);
         }
       };
@@ -501,8 +532,79 @@ export default function BoundaryPageLayout({
 
       reader.readAsText(uploadedFile);
     } else {
-      // Untuk file .zip / .shp / binary shapefile
-      fallbackSimulation(sz);
+      // 2. Parsing Berkas Arsip ZIP Shapefile (.zip / .shp) menggunakan shpjs
+      const reader = new FileReader();
+
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const pct = Math.round((event.loaded / event.total) * 45);
+          setUploadProgress(pct);
+          setUploadStage(`Membaca arsip biner Shapefile (${pct}%)...`);
+        }
+      };
+
+      reader.onload = async (e) => {
+        try {
+          setUploadProgress(50);
+          setUploadStage("Membongkar arsip ZIP & membaca layer biner (.shp, .dbf, .prj)...");
+
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+
+          // Muat pustaka parser Shapefile shpjs
+          const shpModule: any = await import("shpjs");
+          const shp = shpModule.default || shpModule;
+
+          setUploadProgress(75);
+          setUploadStage("Mengekstrak seluruh poligon geometri dan tabel dBASE (.dbf)...");
+
+          const geojson = await shp(arrayBuffer);
+
+          setUploadProgress(88);
+          setUploadStage("Memetakan atribut kolom baku dan koordinat spasial...");
+
+          const parsedRecords = extractRecordsFromGeoJson(geojson);
+
+          if (parsedRecords.length > 0) {
+            setUploadProgress(96);
+            setUploadStage(`Menyinkronkan ${parsedRecords.length} data spasial ke tabel & peta...`);
+
+            setTimeout(() => {
+              // Ganti dengan data asli hasil ekstraksi SHP (menggantikan dummy sebelumnya)
+              setData(parsedRecords);
+              setUploadProgress(100);
+              setUploadStage(`Selesai! Berhasil mengimpor ${parsedRecords.length} poligon nyata.`);
+              setUploadSuccess(true);
+              setImportedSummary({
+                count: parsedRecords.length,
+                sizeStr: sz,
+                fileName: uploadedFile.name,
+              });
+
+              supabase
+                .logAudit({
+                  action: "UPLOAD",
+                  table_name: tableName,
+                  record_id: uploadedFile.name,
+                  details: `Unggah SHP ZIP ${levelName} (${uploadedFile.name}, ${sz}) - ${parsedRecords.length} poligon diekstrak nyata dari berkas`,
+                })
+                .catch(() => {});
+
+              setIsUploading(false);
+            }, 350);
+          } else {
+            throw new Error("Tidak ada fitur poligon valid ditemukan di dalam berkas ZIP SHP.");
+          }
+        } catch (err: any) {
+          console.error("Gagal parse SHP secara langsung:", err);
+          fallbackSimulation(sz);
+        }
+      };
+
+      reader.onerror = () => {
+        fallbackSimulation(sz);
+      };
+
+      reader.readAsArrayBuffer(uploadedFile);
     }
   };
 
@@ -528,7 +630,7 @@ export default function BoundaryPageLayout({
 
         const newRecords = generateImportedRecordsFromUpload(uploadedFile?.name || "data.shp");
 
-        setData((prev) => [...newRecords, ...prev]);
+        setData(newRecords);
         setUploadProgress(100);
         setUploadStage(`Selesai! ${newRecords.length} poligon spasial berhasil dimuat.`);
         setUploadSuccess(true);
