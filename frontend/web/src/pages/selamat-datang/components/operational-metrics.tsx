@@ -7,29 +7,29 @@ export default function OperationalMetrics() {
       <MetricCard
         icon={<TableIcon />}
         title="Realisasi Produksi TBS"
-        value="1.284 Ton"
-        change="7.0%"
+        value="0 Ton"
+        change="0%"
         direction="up"
       />
       <MetricCard
         icon={<CheckCircleIcon />}
         title="Realisasi Pemupukan"
-        value="420 Ha"
-        change="12.5%"
+        value="0 Ha"
+        change="0%"
         direction="up"
       />
       <MetricCard
         icon={<CheckCircleIcon />}
         title="Pengendalian Gulma (Semprot)"
-        value="315 Ha"
-        change="4.2%"
+        value="0 Ha"
+        change="0%"
         direction="up"
       />
       <MetricCard
         icon={<CheckCircleIcon />}
         title="Pemeliharaan Pruning"
-        value="530 Ha"
-        change="8.6%"
+        value="0 Ha"
+        change="0%"
         direction="up"
       />
     </div>

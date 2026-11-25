@@ -1,51 +1,48 @@
-import { Link } from "react-router";
-import { ChevronLeftIcon } from "@/icons";
 import { cn } from "@/utils";
-import AuthDivider from "../divider";
+import { Link } from "react-router";
 import SignUpFormFields from "./form";
 import SignUpHeader from "./header";
-import { SocialButtons } from "./social-button";
 
 export default function SignUp() {
+  const baseUrl = import.meta.env.BASE_URL;
+
   return (
-    <div
-      className={cn(
-        "no-scrollbar flex w-full flex-1 flex-col overflow-y-auto lg:w-1/2",
-      )}
-    >
-      <div className="mx-auto mb-5 w-full max-w-md sm:pt-10">
-        <Link
-          to="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-          <ChevronLeftIcon className="rtl:rotate-180" />
-          Back to dashboard
-        </Link>
-      </div>
-
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
-        <div>
-          <SignUpHeader />
-
+      <div className={cn("flex w-full flex-1 flex-col lg:w-1/2")}>
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
           <div>
-            <SocialButtons />
-            <AuthDivider />
-            <SignUpFormFields />
+            {/* Logo on mobile view */}
+            <div className="mb-6 flex justify-center lg:hidden">
+              <Link to="/" className="flex items-center gap-3">
+                <img
+                  src={`${baseUrl}images/logo/favicon.png`}
+                  alt="GIS Departemen Logo"
+                  className="size-12 rounded-xl object-contain shadow-sm"
+                />
+                <span className="text-xl font-bold tracking-tight text-gray-800 dark:text-white">
+                  GIS Departemen
+                </span>
+              </Link>
+            </div>
 
-            <div className="mt-5">
-              <p className="text-center text-sm font-normal text-gray-700 sm:text-start dark:text-gray-400">
-                Already have an account?{" "}
-                <Link
-                  to="/signin"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                >
-                  Sign In
-                </Link>
-              </p>
+            <SignUpHeader />
+
+            <div>
+              <SignUpFormFields />
+
+              <div className="mt-5">
+                  <p className="text-center text-xs text-gray-500 dark:text-gray-400">
+                    Sudah punya akun?{" "}
+                    <Link
+                      to="/signin"
+                      className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                    >
+                      Masuk ke Sistem
+                    </Link>
+                  </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+      );
 }

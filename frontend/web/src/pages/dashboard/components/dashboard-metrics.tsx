@@ -15,10 +15,10 @@ interface DashboardMetricsProps {
 
 export default function DashboardMetrics({
   filters,
-  totalLuasHa = 18450,
-  totalProduksiTon = 1284,
-  totalPerawatanHa = 2155,
-  sphCompliancePct = 98.4,
+  totalLuasHa = 0,
+  totalProduksiTon = 0,
+  totalPerawatanHa = 0,
+  sphCompliancePct = 0,
   compact = false,
 }: DashboardMetricsProps) {
   const currentModule = filters?.module || "semua";

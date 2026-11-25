@@ -124,6 +124,22 @@ create table if not exists public.batas_ancak (
   created_at timestamptz default now()
 );
 
+-- 9. Tabel Akun Pengguna Riil (gis_users)
+create table if not exists public.gis_users (
+  id text primary key,
+  username text unique not null,
+  password text not null,
+  full_name text not null,
+  title text default 'Staf Operasional GIS',
+  role_key text default 'user_global',
+  role_name text default 'User Global',
+  staff_code text,
+  estate_scope text,
+  region_scope text,
+  status text default 'active',
+  created_at timestamptz default now()
+);
+
 -- Aktifkan Row Level Security (RLS)
 alter table public.gis_audit_logs enable row level security;
 alter table public.batas_perusahaan enable row level security;
@@ -133,11 +149,18 @@ alter table public.batas_afdeling enable row level security;
 alter table public.batas_warung enable row level security;
 alter table public.batas_blok enable row level security;
 alter table public.batas_ancak enable row level security;
+alter table public.gis_users enable row level security;
 
 -- Izinkan Akses Baca & Tulis Penuh untuk API Anonim & Otentikasi
 create policy "Allow all operations for anon" on public.gis_audit_logs for all using (true) with check (true);
 create policy "Allow all operations for anon" on public.batas_perusahaan for all using (true) with check (true);
 create policy "Allow all operations for anon" on public.batas_region for all using (true) with check (true);
+create policy "Allow all operations for anon" on public.batas_estate for all using (true) with check (true);
+create policy "Allow all operations for anon" on public.batas_afdeling for all using (true) with check (true);
+create policy "Allow all operations for anon" on public.batas_warung for all using (true) with check (true);
+create policy "Allow all operations for anon" on public.batas_blok for all using (true) with check (true);
+create policy "Allow all operations for anon" on public.batas_ancak for all using (true) with check (true);
+create policy "Allow all operations for anon" on public.gis_users for all using (true) with check (true);
 create policy "Allow all operations for anon" on public.batas_estate for all using (true) with check (true);
 create policy "Allow all operations for anon" on public.batas_afdeling for all using (true) with check (true);
 create policy "Allow all operations for anon" on public.batas_warung for all using (true) with check (true);

@@ -256,7 +256,7 @@ export function getFilteredMetrics(filters: DashboardFilterState) {
   const totalRealisasiHa = Math.round(estates.reduce((acc, curr) => acc + curr.realisasiHa, 0) * yScale * qScale);
   const totalProduksiTon = Math.round(totalRealisasiHa * 0.59);
   const avgCapaian = totalLuasHa > 0 ? (totalRealisasiHa / totalLuasHa) * 100 : 0;
-  const sphCompliance = 98.4;
+  const sphCompliance = totalLuasHa > 0 ? 98.4 : 0;
 
   return {
     totalLuasHa,
@@ -268,77 +268,9 @@ export function getFilteredMetrics(filters: DashboardFilterState) {
   };
 }
 
-// Helper: Get Regional performance data for bar chart
-export function getRegionalData(filters: DashboardFilterState): RegionPerformanceItem[] {
-  const yScale = getYearScale(filters.year);
-  const qScale = getQuarterScale(filters.quarter);
-
-  let regions: RegionPerformanceItem[] = [
-    {
-      id: "reg-1",
-      name: "REGION 1",
-      company: "PT BUM",
-      estates: ["BUM 1", "BUM 2", "BUM 4"],
-      totalLuasHa: Math.round(6810 * yScale),
-      realisasiHa: Math.round(6280 * yScale * qScale),
-      capaianPct: Math.min(100, Number(((6280 * qScale / 6810) * 100).toFixed(1))),
-      kondisi: "Ringan",
-      warnaHex: "#7BF09B",
-    },
-    {
-      id: "reg-2",
-      name: "REGION 2",
-      company: "PT BUM",
-      estates: ["BUM 5", "BUM 6", "BUM 7"],
-      totalLuasHa: Math.round(6790 * yScale),
-      realisasiHa: Math.round(5439 * yScale * qScale),
-      capaianPct: Math.min(100, Number(((5439 * qScale / 6790) * 100).toFixed(1))),
-      kondisi: "Sedang",
-      warnaHex: "#FFFF00",
-    },
-    {
-      id: "reg-3",
-      name: "REGION 3 (BUM)",
-      company: "PT BUM",
-      estates: ["BUM 3", "BUM 8"],
-      totalLuasHa: Math.round(4850 * yScale),
-      realisasiHa: Math.round(4459 * yScale * qScale),
-      capaianPct: Math.min(100, Number(((4459 * qScale / 4850) * 100).toFixed(1))),
-      kondisi: "Ringan",
-      warnaHex: "#7BF09B",
-    },
-    {
-      id: "reg-bsl",
-      name: "BSL",
-      company: "BSL",
-      estates: ["BSL"],
-      totalLuasHa: Math.round(2100 * yScale),
-      realisasiHa: Math.round(1932 * yScale * qScale),
-      capaianPct: Math.min(100, Number(((1932 * qScale / 2100) * 100).toFixed(1))),
-      kondisi: "Ringan",
-      warnaHex: "#7BF09B",
-    },
-  ];
-
-  if (filters.company === "BSL") {
-    regions = regions.filter((r) => r.company === "BSL");
-  } else if (filters.company === "PT_BUM") {
-    regions = regions.filter((r) => r.company === "PT BUM");
-  }
-
-  if (filters.region !== "Semua") {
-    regions = regions.filter((r) => r.name.includes(filters.region));
-  }
-
-  // Petakan warna dan kondisi dinamis sesuai module/aktivitas yang dipilih
-  return regions.map((r) => {
-    const colorInfo = getConditionColor(r.capaianPct, filters.module);
-    return {
-      ...r,
-      kondisi: colorInfo.kondisi,
-      warnaHex: colorInfo.hex,
-    };
-  });
+// Helper: Get Regional performance data for bar chart (kosong jika belum ada data di database)
+export function getRegionalData(_filters: DashboardFilterState): RegionPerformanceItem[] {
+  return [];
 }
 
 // Helper: Get Estate performance data for bar chart
@@ -377,66 +309,9 @@ export function getEstateData(filters: DashboardFilterState): EstatePerformanceI
   return estates;
 }
 
-// Helper: Get Afdelings for a selected estate
-export function getAfdelingData(estateName: string, moduleOption?: OperationalModuleOption): AfdelingPerformanceItem[] {
-  // Pre-configured afdeling data per estate
-  const afdelingMap: Record<string, { afd: string; pct: number; luas: number }[]> = {
-    "BUM 1": [
-      { afd: "Afdeling 1", pct: 98.5, luas: 490 },
-      { afd: "Afdeling 2", pct: 92.0, luas: 480 },
-      { afd: "Afdeling 3", pct: 87.5, luas: 510 },
-      { afd: "Afdeling 4", pct: 75.0, luas: 470 },
-      { afd: "Afdeling 5", pct: 55.0, luas: 500 },
-    ],
-    "BUM 2": [
-      { afd: "Afdeling 6", pct: 97.5, luas: 450 },
-      { afd: "Afdeling 7", pct: 95.0, luas: 430 },
-      { afd: "Afdeling 8", pct: 88.0, luas: 460 },
-      { afd: "Afdeling 9", pct: 63.0, luas: 440 },
-      { afd: "Afdeling 10", pct: 40.0, luas: 430 },
-    ],
-    "BUM 4": [
-      { afd: "Afdeling 11", pct: 100, luas: 420 },
-      { afd: "Afdeling 12", pct: 96.0, luas: 440 },
-      { afd: "Afdeling 13", pct: 90.0, luas: 430 },
-      { afd: "Afdeling 14", pct: 72.0, luas: 410 },
-      { afd: "Afdeling 15", pct: 48.0, luas: 450 },
-    ],
-    "BUM 5": [
-      { afd: "Afdeling 16", pct: 98.0, luas: 460 },
-      { afd: "Afdeling 17", pct: 92.0, luas: 470 },
-      { afd: "Afdeling 18", pct: 88.0, luas: 450 },
-      { afd: "Afdeling 19", pct: 64.0, luas: 460 },
-      { afd: "Afdeling 20", pct: 45.0, luas: 480 },
-    ],
-    BSL: [
-      { afd: "Afdeling 1", pct: 100, luas: 520 },
-      { afd: "Afdeling 2", pct: 93.0, luas: 530 },
-      { afd: "Afdeling 3", pct: 85.0, luas: 510 },
-      { afd: "Afdeling 4", pct: 52.0, luas: 540 },
-    ],
-  };
-
-  const list = afdelingMap[estateName] || [
-    { afd: "Afdeling 1", pct: 95.0, luas: 450 },
-    { afd: "Afdeling 2", pct: 88.0, luas: 460 },
-    { afd: "Afdeling 3", pct: 78.0, luas: 440 },
-    { afd: "Afdeling 4", pct: 60.0, luas: 450 },
-  ];
-
-  return list.map((item) => {
-    const colorInfo = getConditionColor(item.pct, moduleOption);
-    return {
-      afdeling: item.afd,
-      estate: estateName,
-      region: "REGION",
-      luasHa: item.luas,
-      realisasiHa: Math.round(item.luas * (item.pct / 100)),
-      capaianPct: item.pct,
-      kondisi: colorInfo.kondisi,
-      warnaHex: colorInfo.hex,
-    };
-  });
+// Helper: Get Afdelings for a selected estate (kosong jika belum ada data di database)
+export function getAfdelingData(_estateName: string, _moduleOption?: OperationalModuleOption): AfdelingPerformanceItem[] {
+  return [];
 }
 
 // Helper: Get Top 3 and Bottom 3 blocks for a selected estate
@@ -504,6 +379,7 @@ export function getMapFeatures(filters: DashboardFilterState) {
 // Helper: Calculate Condition Distribution sesuai unggahan tabel warna operasional 2026
 export function getStatusDistribution(filters: DashboardFilterState) {
   const { totalLuasHa } = getFilteredMetrics(filters);
+  if (totalLuasHa === 0) return [];
   const mod = filters.module || "semua";
 
   if (mod === "produksi") {

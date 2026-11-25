@@ -56,10 +56,10 @@ export default function OperationalTrendChart({
     return getDecisionMatrixData(activeFilters);
   }, [activeFilters]);
 
-  // Dataset Bulanan Volume (Target vs Realisasi)
+  // Dataset Bulanan Volume (Target vs Realisasi - kosong hingga ada unggahan database)
   const volumeDataset = useMemo(() => {
-    const baseTarget = [240, 260, 280, 290, 310, 330, 320, 310, 300, 290, 280, 270];
-    const baseRealisasi = [230, 255, 275, 288, 305, 320, 312, 300, 290, 0, 0, 0];
+    const baseTarget = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const baseRealisasi = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
     const target = baseTarget.map((val) => Math.round(val * multiplier));
     const realisasi = baseRealisasi.map((val) => Math.round(val * multiplier));

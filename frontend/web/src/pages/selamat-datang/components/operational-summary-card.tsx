@@ -7,48 +7,48 @@ const operationalModules: OperationalSummaryItem[] = [
     key: "produksi",
     title: "Produksi (Panen TBS & TPH)",
     path: "/data-operasional/produksi",
-    progress: 92,
-    completedText: "1.284 / 1.400 Ton Target",
+    progress: 0,
+    completedText: "Belum ada data",
     status: "normal",
   },
   {
     key: "pemupukan",
     title: "Pemupukan",
     path: "/data-operasional/perawatan/pemupukan",
-    progress: 84,
-    completedText: "420 / 500 Ha Selesai",
-    status: "active",
+    progress: 0,
+    completedText: "Belum ada data",
+    status: "normal",
   },
   {
     key: "semprot",
     title: "Semprot",
     path: "/data-operasional/perawatan/semprot",
-    progress: 78,
-    completedText: "315 / 400 Ha Selesai",
+    progress: 0,
+    completedText: "Belum ada data",
     status: "normal",
   },
   {
     key: "pruning",
     title: "Pruning",
     path: "/data-operasional/perawatan/pruning",
-    progress: 88,
-    completedText: "530 / 600 Ha Selesai",
+    progress: 0,
+    completedText: "Belum ada data",
     status: "normal",
   },
   {
     key: "pasar_pikul",
     title: "Pasar Pikul",
     path: "/data-operasional/perawatan/pasar-pikul",
-    progress: 70,
-    completedText: "140 / 200 Ha Selesai",
-    status: "review",
+    progress: 0,
+    completedText: "Belum ada data",
+    status: "normal",
   },
   {
     key: "jangkos",
     title: "Jangkos",
     path: "/data-operasional/perawatan/jangkos",
-    progress: 65,
-    completedText: "260 / 400 Ha Selesai",
+    progress: 0,
+    completedText: "Belum ada data",
     status: "normal",
   },
 ];
@@ -98,13 +98,12 @@ export default function OperationalSummaryCard() {
             <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
               <div
                 style={{ width: `${item.progress}%` }}
-                className={`h-full rounded-full transition-all duration-300 ${
-                  item.progress >= 80
+                className={`h-full rounded-full transition-all duration-300 ${item.progress >= 80
                     ? "bg-brand-500"
                     : item.progress >= 70
-                    ? "bg-amber-500"
-                    : "bg-blue-500"
-                }`}
+                      ? "bg-amber-500"
+                      : "bg-blue-500"
+                  }`}
               />
             </div>
 

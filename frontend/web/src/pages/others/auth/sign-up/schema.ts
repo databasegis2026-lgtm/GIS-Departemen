@@ -2,21 +2,18 @@ import { z } from "zod";
 
 export const signUpSchema = z
   .object({
-    fname: z.string().trim().min(1, "First name is required"),
-    lname: z.string().trim().min(1, "Last name is required"),
-    email: z
+    username: z
       .string()
       .trim()
-      .min(1, "Email is required")
-      .email("Please enter a valid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-    terms: z.boolean().refine((val) => val === true, {
-      message: "You must agree to the Terms and Conditions",
-    }),
+      .min(3, "Username minimal 3 karakter")
+      .max(30, "Username maksimal 30 karakter")
+      .regex(/^[a-z0-9._]+$/, "Username hanya boleh huruf kecil, angka, titik, atau garis bawah"),
+    fullName: z.string().trim().min(1, "Nama lengkap wajib diisi"),
+    password: z.string().min(6, "Kata sandi minimal 6 karakter"),
+    confirmPassword: z.string().min(1, "Konfirmasi kata sandi wajib diisi"),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
+    message: "Kata sandi tidak cocok",
     path: ["confirmPassword"],
   });
 

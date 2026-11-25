@@ -19,9 +19,9 @@ function getGreeting(hour: number): string {
 export default function SelamatDatangPage() {
   const [userName] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("gis_username") || "Rudi Wahyudi";
+      return localStorage.getItem("gis_username") || "Pengguna";
     }
-    return "Rudi Wahyudi";
+    return "Pengguna";
   });
 
   const [greeting] = useState(() => {

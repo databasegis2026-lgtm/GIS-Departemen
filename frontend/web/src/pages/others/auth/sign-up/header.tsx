@@ -7,8 +7,8 @@ export interface SignUpHeaderProps {
 }
 
 export default function SignUpHeader({
-  title = "Sign Up",
-  description = "Enter your email and password to sign up!",
+  title = "Daftar Akun Baru",
+  description = "Buat akun untuk mengakses GIS Departemen. Data akun akan tersimpan di database.",
   className,
 }: SignUpHeaderProps) {
   return (

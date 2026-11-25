@@ -154,7 +154,7 @@ class SupabaseClient {
             new_data: data,
             user_name: auditInfo?.user,
             details: auditInfo?.details || `Insert/Upload ${Array.isArray(records) ? records.length : 1} record(s) ke ${table}`,
-          }).catch(() => {});
+          }).catch(() => { });
 
           return { data, error: null };
         } catch (err: any) {
@@ -196,7 +196,7 @@ class SupabaseClient {
             new_data: data,
             user_name: auditInfo?.user,
             details: auditInfo?.details || `Update record pada tabel ${table} (filter: ${params.toString()})`,
-          }).catch(() => {});
+          }).catch(() => { });
 
           return { data, error: null };
         } catch (err: any) {
@@ -236,7 +236,7 @@ class SupabaseClient {
             old_data: data,
             user_name: auditInfo?.user,
             details: auditInfo?.details || `Delete record dari tabel ${table} (filter: ${params.toString()})`,
-          }).catch(() => {});
+          }).catch(() => { });
 
           return { data, error: null };
         } catch (err: any) {
