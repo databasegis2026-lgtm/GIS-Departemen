@@ -29,6 +29,8 @@ export default function BoundaryMapModal({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const polygonLayerRef = useRef<L.Polygon | null>(null);
   const [basemap, setBasemap] = useState<"satellite" | "osm">("satellite");
+  const [isAttrOpen, setIsAttrOpen] = useState(true);
+  const [isAttrMinimized, setIsAttrMinimized] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !mapContainerRef.current) return;
@@ -245,27 +247,122 @@ export default function BoundaryMapModal({
         <div className="relative flex-1 w-full bg-gray-100 dark:bg-gray-950">
           <div ref={mapContainerRef} className="absolute inset-0 z-0" />
 
-          {/* Bottom Floating Info Card */}
+          {/* Bottom Floating Collapsible Info Card */}
           {data && (
-            <div className="absolute bottom-4 left-4 z-10 max-w-md rounded-xl bg-white/95 p-3.5 shadow-lg backdrop-blur-md border border-gray-200 dark:bg-gray-900/95 dark:border-gray-800">
-              <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
-                Atribut Spasial Terpilih
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                {Object.entries(data)
-                  .filter(([k]) => k !== "coordinates" && k !== "id")
-                  .slice(0, 8)
-                  .map(([key, val]) => (
-                    <div key={key} className="flex flex-col">
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                        {key}
-                      </span>
-                      <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">
-                        {String(val ?? "-")}
+            <div className="absolute bottom-4 left-4 z-20">
+              {/* State 1: Tombol Pembuka saat Card Ditutup Sepenuhnya */}
+              {!isAttrOpen ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAttrOpen(true);
+                    setIsAttrMinimized(false);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-gray-800 shadow-md backdrop-blur-md hover:bg-white dark:bg-gray-900/90 dark:text-gray-200 dark:hover:bg-gray-900 border border-gray-200/80 dark:border-gray-800 transition cursor-pointer"
+                >
+                  <span
+                    className="size-2 rounded-full inline-block"
+                    style={{ backgroundColor: strokeColor }}
+                  />
+                  <span>Info Atribut</span>
+                  <svg className="size-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="18 15 12 9 6 15" />
+                  </svg>
+                </button>
+              ) : isAttrMinimized ? (
+                /* State 2: Saat Diminimize (Hanya Bar Baris Kecil) */
+                <div className="inline-flex items-center gap-2 rounded-lg bg-white/95 px-3 py-1.5 shadow-lg backdrop-blur-md border border-gray-200/90 dark:bg-gray-900/95 dark:border-gray-800">
+                  <span
+                    className="size-2 rounded-full inline-block"
+                    style={{ backgroundColor: strokeColor }}
+                  />
+                  <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200">
+                    {levelName} Atribut ({Object.keys(data).filter((k) => k !== "coordinates" && k !== "id").length})
+                  </span>
+                  <div className="flex items-center gap-1 border-l border-gray-200 pl-1.5 dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => setIsAttrMinimized(false)}
+                      title="Perbesar Tampilan"
+                      className="rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 cursor-pointer"
+                    >
+                      <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="18 15 12 9 6 15" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAttrOpen(false)}
+                      title="Tutup Panel"
+                      className="rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 cursor-pointer"
+                    >
+                      <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* State 3: Normal Compact View (Maksimal Lebar w-76, Tidak Menutupi Layar) */
+                <div className="w-72 sm:w-80 rounded-xl bg-white/95 p-3 shadow-xl backdrop-blur-md border border-gray-200/90 dark:bg-gray-900/95 dark:border-gray-800 transition-all animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-1.5 mb-2 dark:border-gray-800">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="size-2 rounded-full inline-block"
+                        style={{ backgroundColor: strokeColor }}
+                      />
+                      <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
+                        Atribut {levelName}
                       </span>
                     </div>
-                  ))}
-              </div>
+
+                    <div className="flex items-center gap-1">
+                      {/* Minimize Button */}
+                      <button
+                        type="button"
+                        onClick={() => setIsAttrMinimized(true)}
+                        title="Kecilkan / Minimize"
+                        className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition cursor-pointer"
+                      >
+                        <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      {/* Close Button */}
+                      <button
+                        type="button"
+                        onClick={() => setIsAttrOpen(false)}
+                        title="Tutup Panel"
+                        className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition cursor-pointer"
+                      >
+                        <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Body List Scrollable Tipis */}
+                  <div className="max-h-44 overflow-y-auto pr-1 space-y-1.5 divide-y divide-gray-100 dark:divide-gray-800/60">
+                    {Object.entries(data)
+                      .filter(([k]) => k !== "coordinates" && k !== "id")
+                      .map(([key, val]) => (
+                        <div key={key} className="flex items-center justify-between pt-1 text-xs">
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                            {key}
+                          </span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-200 text-right truncate max-w-[150px]">
+                            {key.toLowerCase().includes("luas") && typeof val === "number"
+                              ? `${val.toLocaleString("id-ID")} Ha`
+                              : String(val ?? "-")}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

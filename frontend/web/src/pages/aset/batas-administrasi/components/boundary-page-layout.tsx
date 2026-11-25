@@ -94,6 +94,28 @@ export default function BoundaryPageLayout({
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Record<string, any> | null>(null);
 
+  // Pagination & Display state
+  const [pageSize, setPageSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("gis_page_size");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if ([10, 25, 50, 100].includes(parsed)) return parsed;
+      }
+    } catch {}
+    return 10;
+  });
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Simpan preferensi pageSize
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+    try {
+      localStorage.setItem("gis_page_size", String(newSize));
+    } catch {}
+  };
+
   // Filtered rows
   const filteredData = useMemo(() => {
     if (!searchQuery.trim()) return data;
@@ -104,6 +126,32 @@ export default function BoundaryPageLayout({
       )
     );
   }, [data, searchQuery]);
+
+  // Reset ke halaman 1 saat pencarian berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Hitung total halaman & slice data yang tampil
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedData = useMemo(() => {
+    const start = (validCurrentPage - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, validCurrentPage, pageSize]);
+
+  // Hitung total luas jika ada kolom luas
+  const totalLuasKumulatif = useMemo(() => {
+    const luasKey = columns.find((c) => c.toLowerCase().includes("luas"));
+    if (!luasKey) return null;
+    const sum = filteredData.reduce((acc, row) => {
+      const val = row[luasKey];
+      const num = typeof val === "number" ? val : parseFloat(String(val).replace(/,/g, "."));
+      return !isNaN(num) ? acc + num : acc;
+    }, 0);
+    return sum;
+  }, [filteredData, columns]);
 
   // Helper untuk membersihkan dan menyesuaikan tipe data payload sebelum dikirim ke database
   // Hanya kolom yang terdaftar di `columns`, `id`, dan `coordinates` yang diizinkan masuk ke database.
@@ -434,20 +482,50 @@ export default function BoundaryPageLayout({
 
       {/* Action & Filter Bar */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between -mt-2">
-        <div className="relative w-full sm:w-80">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Cari dalam data ${pageTitle.toLowerCase()}...`}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-800 placeholder-gray-400 shadow-theme-xs focus:border-emerald-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-          />
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+          <div className="relative w-full sm:w-72">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={`Cari dalam data ${pageTitle.toLowerCase()}...`}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-800 placeholder-gray-400 shadow-theme-xs focus:border-emerald-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Badge Total Luas jika ada */}
+          {totalLuasKumulatif !== null && totalLuasKumulatif > 0 && (
+            <div className="hidden lg:inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-900/50 dark:text-emerald-300">
+              <span>Total Luas:</span>
+              <span className="font-mono">{totalLuasKumulatif.toLocaleString("id-ID", { maximumFractionDigits: 2 })} Ha</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono mr-1 hidden sm:inline">
-            {filteredData.length} data
-          </span>
+          {/* Page Size Dropdown */}
+          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+            <span className="hidden sm:inline text-[11px]">Tampilkan:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 shadow-theme-xs focus:border-emerald-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 cursor-pointer"
+            >
+              <option value={10}>10 baris</option>
+              <option value={25}>25 baris</option>
+              <option value={50}>50 baris</option>
+              <option value={100}>100 baris</option>
+            </select>
+          </div>
 
           <button
             type="button"
@@ -526,80 +604,134 @@ export default function BoundaryPageLayout({
                   </td>
                 </tr>
               ) : (
-                filteredData.map((row, idx) => (
-                  <tr
-                    key={row.id || idx}
-                    className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition"
-                  >
-                    <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 text-center font-mono">
-                      {idx + 1}
-                    </td>
-                    {columns.map((col) => (
-                      <td
-                        key={col}
-                        className="px-3 py-2 text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap"
-                      >
-                        {col.toLowerCase().includes("luas") && typeof row[col] === "number"
-                          ? `${row[col].toLocaleString("id-ID")} Ha`
-                          : row[col] ?? "-"}
+                paginatedData.map((row, idx) => {
+                  const globalIdx = (validCurrentPage - 1) * pageSize + idx + 1;
+                  return (
+                    <tr
+                      key={row.id || idx}
+                      className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition"
+                    >
+                      <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 text-center font-mono">
+                        {globalIdx}
                       </td>
-                    ))}
-                    <td className="px-3 py-2 text-xs text-center sticky right-0 bg-white dark:bg-gray-900 whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {/* Lihat di Peta */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedMapRecord({ ...row });
-                            setMapModalOpen(true);
-                          }}
-                          title="Lihat Poligon di Peta"
-                          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-white shadow-2xs hover:opacity-90 transition cursor-pointer"
-                          style={{ backgroundColor: strokeColor }}
+                      {columns.map((col) => (
+                        <td
+                          key={col}
+                          className="px-3 py-2 text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap"
                         >
-                          <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-                            <line x1="8" y1="2" x2="8" y2="18" />
-                            <line x1="16" y1="6" x2="16" y2="22" />
-                          </svg>
-                          <span>Peta</span>
-                        </button>
+                          {col.toLowerCase().includes("luas") && typeof row[col] === "number"
+                            ? `${row[col].toLocaleString("id-ID")} Ha`
+                            : row[col] ?? "-"}
+                        </td>
+                      ))}
+                      <td className="px-3 py-2 text-xs text-center sticky right-0 bg-white dark:bg-gray-900 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Lihat di Peta */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedMapRecord({ ...row });
+                              setMapModalOpen(true);
+                            }}
+                            title="Lihat Poligon di Peta"
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-white shadow-2xs hover:opacity-90 transition cursor-pointer"
+                            style={{ backgroundColor: strokeColor }}
+                          >
+                            <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                              <line x1="8" y1="2" x2="8" y2="18" />
+                              <line x1="16" y1="6" x2="16" y2="22" />
+                            </svg>
+                            <span>Peta</span>
+                          </button>
 
-                        {/* Edit */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingRecord({ ...row });
-                            setFormModalOpen(true);
-                          }}
-                          title="Edit Data Atribut"
-                          className="rounded-md border border-gray-300 p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white transition cursor-pointer"
-                        >
-                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                          </svg>
-                        </button>
+                          {/* Edit */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingRecord({ ...row });
+                              setFormModalOpen(true);
+                            }}
+                            title="Edit Data Atribut"
+                            className="rounded-md border border-gray-300 p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white transition cursor-pointer"
+                          >
+                            <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                          </button>
 
-                        {/* Hapus */}
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(row)}
-                          title="Hapus Data"
-                          className="rounded-md border border-red-200 p-1 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40 transition cursor-pointer"
-                        >
-                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {/* Hapus */}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(row)}
+                            title="Hapus Data"
+                            className="rounded-md border border-red-200 p-1 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40 transition cursor-pointer"
+                          >
+                            <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Footer Pagination & Counter Data */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800 gap-3 bg-gray-50/50 dark:bg-gray-800/25">
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            {filteredData.length > 0 ? (
+              <span>
+                Menampilkan <b>{(validCurrentPage - 1) * pageSize + 1}</b> –{" "}
+                <b>{Math.min(validCurrentPage * pageSize, filteredData.length)}</b> dari{" "}
+                <b>{filteredData.length}</b> data
+                {searchQuery && (
+                  <span className="text-gray-400 dark:text-gray-500 ml-1">
+                    (difilter dari total {data.length})
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span>0 data ditemukan</span>
+            )}
+          </div>
+
+          {/* Navigation Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={validCurrentPage <= 1}
+                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 transition cursor-pointer"
+              >
+                ← Prev
+              </button>
+
+              <div className="flex items-center gap-1 px-1 text-xs font-mono">
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {validCurrentPage}
+                </span>
+                <span className="text-gray-400">/</span>
+                <span className="text-gray-500 dark:text-gray-400">{totalPages}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={validCurrentPage >= totalPages}
+                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 transition cursor-pointer"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
