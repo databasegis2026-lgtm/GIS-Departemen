@@ -104,15 +104,48 @@ export default function BoundaryPageLayout({
     );
   }, [data, searchQuery]);
 
+  // Helper untuk membersihkan dan menyesuaikan tipe data payload sebelum dikirim ke database
+  const sanitizeRecordForDb = (record: Record<string, any>) => {
+    const clean: Record<string, any> = {};
+    for (const [key, value] of Object.entries(record)) {
+      if (key === "coordinates") {
+        // Biarkan coordinates apa adanya jika valid array
+        if (Array.isArray(value) && value.length > 0) {
+          clean[key] = value;
+        }
+        continue;
+      }
+
+      // Kolom numerik seperti Luas, luas, TM_Pokok
+      const isNumericCol =
+        key.toLowerCase().includes("luas") ||
+        key.toLowerCase().includes("pokok") ||
+        key.toLowerCase().includes("tahuntanam");
+
+      if (isNumericCol) {
+        if (value === "" || value === null || value === undefined || value === "-") {
+          clean[key] = null;
+        } else {
+          const num = Number(String(value).replace(/,/g, "."));
+          clean[key] = isNaN(num) ? null : num;
+        }
+      } else {
+        clean[key] = value === "" ? null : value;
+      }
+    }
+    return clean;
+  };
+
   // Handle Add/Edit Submit
   const handleFormSubmit = async (record: Record<string, any>) => {
+    const sanitized = sanitizeRecordForDb(record);
+
     if (editingRecord) {
       // UPDATE — gunakan id dari editingRecord
-      const updated = { ...record };
-      delete updated.id; // jangan kirim id di body PATCH
+      delete sanitized.id; // jangan kirim id di body PATCH
       const res = await supabase
         .from(tableName)
-        .update(updated, { id: `eq.${editingRecord.id}` });
+        .update(sanitized, { id: `eq.${editingRecord.id}` });
       if (res.error) {
         alert(`Gagal update: ${res.error.message || JSON.stringify(res.error)}`);
         return;
@@ -126,8 +159,8 @@ export default function BoundaryPageLayout({
     } else {
       // INSERT — gunakan UUID sebagai id
       const newId = genUUID();
-      const newRow = { ...record, id: newId };
-      const res = await supabase.from(tableName).insert(newRow);
+      sanitized.id = newId;
+      const res = await supabase.from(tableName).insert(sanitized);
       if (res.error) {
         alert(`Gagal simpan: ${res.error.message || JSON.stringify(res.error)}`);
         return;
@@ -136,7 +169,7 @@ export default function BoundaryPageLayout({
       const savedRow =
         res.data && Array.isArray(res.data) && res.data.length > 0
           ? res.data[0]
-          : newRow;
+          : { ...record, id: newId };
       setData((prev) => [savedRow, ...prev]);
     }
   };
@@ -225,11 +258,9 @@ export default function BoundaryPageLayout({
     records: Record<string, any>[]
   ): Promise<number> => {
     if (records.length === 0) return 0;
-    // Hapus field coordinates dari DB (terlalu besar / tidak ada kolom geometry)
-    const dbRecords = records.map((r) => {
-      const { coordinates, ...rest } = r;
-      return rest;
-    });
+    
+    // Sanitasi tiap record agar sesuai dengan skema tabel di Supabase
+    const dbRecords = records.map((r) => sanitizeRecordForDb(r));
 
     // Kirim batch per 50 record untuk hindari payload terlalu besar
     const BATCH = 50;
