@@ -145,13 +145,12 @@ export const navItems: NavItem[] = [
         key: "batasAdministrasi",
         path: "/aset/batas-administrasi",
         subItems: [
-          { key: "batasAncak", path: "/aset/batas-administrasi/batas-ancak" },
-          { key: "batasBlok", path: "/aset/batas-administrasi/batas-blok" },
-          { key: "batasWarung", path: "/aset/batas-administrasi/batas-warung" },
-          { key: "batasAfdeling", path: "/aset/batas-administrasi/batas-afdeling" },
-          { key: "batasEstate", path: "/aset/batas-administrasi/batas-estate" },
           { key: "batasRegion", path: "/aset/batas-administrasi/batas-region" },
-          { key: "batasPt", path: "/aset/batas-administrasi/batas-pt" },
+          { key: "batasEstate", path: "/aset/batas-administrasi/batas-estate" },
+          { key: "batasAfdeling", path: "/aset/batas-administrasi/batas-afdeling" },
+          { key: "batasWarung", path: "/aset/batas-administrasi/batas-warung" },
+          { key: "batasBlok", path: "/aset/batas-administrasi/batas-blok" },
+          { key: "batasAncak", path: "/aset/batas-administrasi/batas-ancak" },
         ],
       },
       {

@@ -12,6 +12,12 @@ import RequestUpdatePetaPage from "@/pages/ticketing-update-peta";
 import EditPetaSpasialPage from "@/pages/edit-peta-spasial";
 import AsetPage from "@/pages/aset";
 import BatasAdministrasiPage from "@/pages/aset/batas-administrasi";
+import BatasRegionPage from "@/pages/aset/batas-administrasi/batas-region";
+import BatasEstatePage from "@/pages/aset/batas-administrasi/batas-estate";
+import BatasAfdelingPage from "@/pages/aset/batas-administrasi/batas-afdeling";
+import BatasWarungPage from "@/pages/aset/batas-administrasi/batas-warung";
+import BatasBlokPage from "@/pages/aset/batas-administrasi/batas-blok";
+import BatasAncakPage from "@/pages/aset/batas-administrasi/batas-ancak";
 import PokokSawitPage from "@/pages/aset/pokok-sawit";
 import PMKSPage from "@/pages/aset/pmks";
 import EmplasmentPage from "@/pages/aset/emplasment";
@@ -58,7 +64,12 @@ export default function App() {
         <Route path="edit-peta-spasial" element={<EditPetaSpasialPage />} />
         <Route path="aset" element={<AsetPage />} />
         <Route path="aset/batas-administrasi" element={<BatasAdministrasiPage />} />
-        <Route path="aset/batas-administrasi/*" element={<BatasAdministrasiPage />} />
+        <Route path="aset/batas-administrasi/batas-region" element={<BatasRegionPage />} />
+        <Route path="aset/batas-administrasi/batas-estate" element={<BatasEstatePage />} />
+        <Route path="aset/batas-administrasi/batas-afdeling" element={<BatasAfdelingPage />} />
+        <Route path="aset/batas-administrasi/batas-warung" element={<BatasWarungPage />} />
+        <Route path="aset/batas-administrasi/batas-blok" element={<BatasBlokPage />} />
+        <Route path="aset/batas-administrasi/batas-ancak" element={<BatasAncakPage />} />
         <Route path="aset/pokok-sawit" element={<PokokSawitPage />} />
         <Route path="aset/pmks" element={<PMKSPage />} />
         <Route path="aset/emplasment" element={<EmplasmentPage />} />
