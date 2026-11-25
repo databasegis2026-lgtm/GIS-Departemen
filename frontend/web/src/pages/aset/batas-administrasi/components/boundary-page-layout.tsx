@@ -203,7 +203,7 @@ export default function BoundaryPageLayout({
 
     if (featureList.length === 0) return [];
 
-    return featureList.map((feat: any, idx: number) => {
+    return featureList.map((feat: any) => {
       const props = feat.properties || {};
       const rec: Record<string, any> = { id: genUUID() };
       const propKeys = Object.keys(props);
