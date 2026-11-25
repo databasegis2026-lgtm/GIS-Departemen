@@ -52,6 +52,19 @@ export default function BoundaryPageLayout({
       localStorage.setItem(`gis_data_${tableName}`, JSON.stringify(data));
     } catch {}
   }, [data, tableName]);
+
+  // Ambil data langsung dari Supabase Cloud jika tabel sudah dibuat
+  useEffect(() => {
+    supabase
+      .from(tableName)
+      .select("*")
+      .then((res) => {
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setData(res.data);
+        }
+      })
+      .catch(() => {});
+  }, [tableName]);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modals state
@@ -91,6 +104,7 @@ export default function BoundaryPageLayout({
       setData((prev) =>
         prev.map((item) => (item.id === editingRecord.id ? { ...record, id: item.id } : item))
       );
+      supabase.from(tableName).update(record, { id: `eq.${editingRecord.id}` }).catch(() => {});
       supabase
         .logAudit({
           action: "UPDATE",
@@ -104,6 +118,7 @@ export default function BoundaryPageLayout({
       const newId = `${tableName}-${Date.now()}`;
       const newRow = { ...record, id: newId };
       setData((prev) => [newRow, ...prev]);
+      supabase.from(tableName).insert(newRow).catch(() => {});
       supabase
         .logAudit({
           action: "INSERT",
@@ -120,6 +135,7 @@ export default function BoundaryPageLayout({
     const identifier = row[columns[0]] || row[columns[1]] || row.id;
     if (window.confirm(`Yakin ingin menghapus data ${levelName} "${identifier}"?`)) {
       setData((prev) => prev.filter((item) => item.id !== row.id));
+      supabase.from(tableName).delete({ id: `eq.${row.id}` }).catch(() => {});
       supabase
         .logAudit({
           action: "DELETE",

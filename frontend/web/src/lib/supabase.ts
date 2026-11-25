@@ -8,7 +8,7 @@
 export const SUPABASE_URL =
   import.meta.env.VITE_SUPABASE_URL || "https://fgczcppoaeojaqliudol.supabase.co";
 export const SUPABASE_ANON_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.anon";
+  import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_EuNrihYHUZYJAuL_Chd3tg_CkKdi20S";
 
 export interface SupabaseQueryOptions {
   select?: string;
