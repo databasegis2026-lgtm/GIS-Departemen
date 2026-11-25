@@ -144,30 +144,23 @@ export default function BoundaryPageLayout({
 
       <PageBreadcrumb pageTitle={pageTitle} />
 
-      {/* Header Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-3.5 dark:border-gray-800 -mt-2">
-        <div className="flex items-center gap-2.5">
-          <span
-            className="size-3.5 rounded-full inline-block ring-2 ring-white dark:ring-gray-900 shrink-0"
-            style={{ backgroundColor: strokeColor }}
+      {/* Action & Filter Bar */}
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between -mt-2">
+        <div className="relative w-full sm:w-80">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={`Cari dalam data ${pageTitle.toLowerCase()}...`}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-800 placeholder-gray-400 shadow-theme-xs focus:border-emerald-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
           />
-          <div>
-            <h1 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              {pageTitle}
-              <span
-                className="rounded-md px-2 py-0.5 text-[10px] font-semibold text-white tracking-wide"
-                style={{ backgroundColor: strokeColor }}
-              >
-                {levelName}
-              </span>
-            </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Garis Batas: <span className="font-mono">{strokeColor}</span> • Tebal: {strokeWeight}px {dashArray ? `(Putus-putus)` : `(Solid)`} • {data.length} Poligon Terdaftar
-            </p>
-          </div>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono mr-1 hidden sm:inline">
+            {filteredData.length} data
+          </span>
+
           <button
             type="button"
             onClick={() => {
@@ -195,22 +188,6 @@ export default function BoundaryPageLayout({
             </svg>
             <span>Unggah SHP {levelName}</span>
           </button>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-72">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Cari dalam data ${pageTitle.toLowerCase()}...`}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-800 placeholder-gray-400 shadow-theme-xs focus:border-emerald-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-          />
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-          Menampilkan {filteredData.length} dari {data.length} data
         </div>
       </div>
 

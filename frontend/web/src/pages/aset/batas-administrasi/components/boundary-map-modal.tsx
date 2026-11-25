@@ -174,15 +174,9 @@ export default function BoundaryMapModal({
             <div>
               <h2 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 {title}
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
-                  style={{ backgroundColor: strokeColor }}
-                >
-                  {levelName}
-                </span>
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Garis Batas: {strokeColor} • Tebal: {strokeWeight}px {dashArray ? `(Putus-putus)` : "(Solid)"}
+                Visualisasi Poligon Spasial {levelName}
               </p>
             </div>
           </div>
