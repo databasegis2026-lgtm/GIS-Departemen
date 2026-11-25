@@ -42,6 +42,7 @@ export default function WorkspacePage() {
     penanaman: "planting",
     aset: "assets",
     "batas-administrasi": "batasAdministrasi",
+    "batas-perusahaan": "batasPt",
     "batas-region": "batasRegion",
     "batas-estate": "batasEstate",
     "batas-afdeling": "batasAfdeling",

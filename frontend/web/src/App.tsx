@@ -12,6 +12,7 @@ import RequestUpdatePetaPage from "@/pages/ticketing-update-peta";
 import EditPetaSpasialPage from "@/pages/edit-peta-spasial";
 import AsetPage from "@/pages/aset";
 import BatasAdministrasiPage from "@/pages/aset/batas-administrasi";
+import BatasPerusahaanPage from "@/pages/aset/batas-administrasi/batas-perusahaan";
 import BatasRegionPage from "@/pages/aset/batas-administrasi/batas-region";
 import BatasEstatePage from "@/pages/aset/batas-administrasi/batas-estate";
 import BatasAfdelingPage from "@/pages/aset/batas-administrasi/batas-afdeling";
@@ -64,6 +65,8 @@ export default function App() {
         <Route path="edit-peta-spasial" element={<EditPetaSpasialPage />} />
         <Route path="aset" element={<AsetPage />} />
         <Route path="aset/batas-administrasi" element={<BatasAdministrasiPage />} />
+        <Route path="aset/batas-administrasi/batas-perusahaan" element={<BatasPerusahaanPage />} />
+        <Route path="aset/batas-administrasi/batas-pt" element={<BatasPerusahaanPage />} />
         <Route path="aset/batas-administrasi/batas-region" element={<BatasRegionPage />} />
         <Route path="aset/batas-administrasi/batas-estate" element={<BatasEstatePage />} />
         <Route path="aset/batas-administrasi/batas-afdeling" element={<BatasAfdelingPage />} />

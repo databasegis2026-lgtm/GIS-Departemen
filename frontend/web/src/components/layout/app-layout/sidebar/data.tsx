@@ -145,6 +145,7 @@ export const navItems: NavItem[] = [
         key: "batasAdministrasi",
         path: "/aset/batas-administrasi",
         subItems: [
+          { key: "batasPt", path: "/aset/batas-administrasi/batas-perusahaan" },
           { key: "batasRegion", path: "/aset/batas-administrasi/batas-region" },
           { key: "batasEstate", path: "/aset/batas-administrasi/batas-estate" },
           { key: "batasAfdeling", path: "/aset/batas-administrasi/batas-afdeling" },
