@@ -5,6 +5,7 @@ import GrafikAnalitikPage from "@/pages/grafik-analitik";
 import DataOperasionalPage from "@/pages/data-operasional";
 import { Error404Page } from "@/pages/main/pages";
 import WorkspacePage from "@/pages/main/workspace-page";
+import ManajemenPenggunaPage from "@/pages/manajemen-pengguna";
 import PengaturanAkunPage from "@/pages/manajemen-pengguna/pengaturan-akun";
 import { AuthLayout, SignInPage, SignUpPage } from "@/pages/others/auth";
 import SelamatDatangPage from "@/pages/selamat-datang";
@@ -123,6 +124,7 @@ export default function App() {
         <Route path="monitoring/*" element={<MonitoringPage />} />
 
         {/* Pengaturan Akun & Profil */}
+        <Route path="manajemen-pengguna" element={<ManajemenPenggunaPage />} />
         <Route
           path="manajemen-pengguna/pengaturan-akun"
           element={<PengaturanAkunPage />}
@@ -146,6 +148,7 @@ export default function App() {
               !path.startsWith("/rekap-pekerjaan/persiapan-lahan") &&
               !path.startsWith("/rekap-pekerjaan/pekerjaan-rutin") &&
               !path.startsWith("/monitoring") &&
+              path !== "/manajemen-pengguna" &&
               path !== "/manajemen-pengguna/pengaturan-akun" &&
               path !== "/pengaturan-akun",
           )

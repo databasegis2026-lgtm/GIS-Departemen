@@ -106,6 +106,9 @@ export interface RegisterPayload {
   title?: string;
   roleKey?: RoleKey;
   roleName?: string;
+  staffCode?: string;
+  estateScope?: string;
+  regionScope?: string;
 }
 
 interface AuthContextType {
@@ -218,16 +221,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem("gis_username", matchedLocal.fullName);
         return { success: true };
       }
-    } catch {}
+    } catch { }
 
     return {
       success: false,
-      message: `Akun '${username}' belum terdaftar di database. Silakan klik 'Daftar Akun' untuk membuat akun baru.`,
+      message: `Akun '${username}' tidak ditemukan di database atau kata sandi salah. Hubungi Superadmin untuk pendaftaran akun.`,
     };
   };
 
-  // Handler Pendaftaran Akun Riil Baru ke Supabase
+  // Handler Pendaftaran Akun Riil Baru ke Supabase (KHUSUS SUPERADMIN)
   const register = async (payload: RegisterPayload): Promise<{ success: boolean; message?: string }> => {
+    if (!isAuthenticated || currentUser.roleKey !== "superadmin") {
+      return {
+        success: false,
+        message: "Akses ditolak: Hanya akun dengan role Superadmin yang dapat mendaftarkan akun baru.",
+      };
+    }
+
     const cleanUser = payload.username.trim().toLowerCase();
     const cleanPass = payload.password.trim();
 
@@ -235,48 +245,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: "Username dan kata sandi wajib diisi." };
     }
 
+    const roleIdMap: Record<RoleKey, number> = {
+      superadmin: 1,
+      admin_gis: 2,
+      user_estate: 3,
+      admin_kebun: 4,
+      regional_ho: 5,
+      user_global: 6,
+    };
+
+    const roleKey = payload.roleKey || "user_global";
     const newUser: UserProfile = {
       id: `usr-${Date.now()}`,
       username: cleanUser,
       password: cleanPass,
       fullName: payload.fullName.trim() || cleanUser,
       title: payload.title || "Staf Operasional GIS",
-      roleKey: payload.roleKey || "superadmin",
-      roleName: payload.roleName || "Superadmin GIS",
+      roleKey,
+      roleName: payload.roleName || PRESET_USERS[roleKey]?.roleName || "User Global",
+      staffCode: payload.staffCode,
+      estateScope: payload.estateScope,
+      regionScope: payload.regionScope,
       status: "active",
     };
 
-    // 1. Simpan ke database Supabase
+    // 1. Simpan ke database Supabase (tabel public.gis_users)
     try {
-      await supabase.from("gis_users").insert([
+      const { error } = await supabase.from("gis_users").insert(
+        [
+          {
+            id: newUser.id,
+            username: newUser.username,
+            password: newUser.password,
+            full_name: newUser.fullName,
+            title: newUser.title,
+            role_id: roleIdMap[roleKey] || 6,
+            role_key: newUser.roleKey,
+            role_name: newUser.roleName,
+            staff_code: newUser.staffCode || null,
+            estate_scope: newUser.estateScope || null,
+            region_scope: newUser.regionScope || null,
+            created_by: currentUser.id || null,
+            status: newUser.status,
+          },
+        ],
         {
-          id: newUser.id,
-          username: newUser.username,
-          password: newUser.password,
-          full_name: newUser.fullName,
-          title: newUser.title,
-          role_key: newUser.roleKey,
-          role_name: newUser.roleName,
-          status: newUser.status,
-        },
-      ]);
-    } catch {
-      // Lanjutkan penyimpanan ke local users
+          user: currentUser.fullName,
+          details: `Superadmin mendaftarkan akun baru: ${newUser.username} (${newUser.roleName})`,
+        }
+      );
+
+      if (error) {
+        return {
+          success: false,
+          message: error.message || "Gagal menyimpan akun ke database Supabase.",
+        };
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || "Gagal terhubung ke database Supabase.",
+      };
     }
 
-    // 2. Simpan ke akun terdaftar lokal
+    // 2. Simpan ke cadangan lokal
     try {
       const savedUsers: UserProfile[] = JSON.parse(localStorage.getItem("gis_registered_users") || "[]");
       savedUsers.push(newUser);
       localStorage.setItem("gis_registered_users", JSON.stringify(savedUsers));
-    } catch {}
-
-    // Otomatis login dengan akun yang baru didaftarkan
-    setCurrentUser(newUser);
-    setIsAuthenticated(true);
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(newUser));
-    localStorage.setItem(STORAGE_KEY_AUTH, `token-${newUser.id}-${Date.now()}`);
-    localStorage.setItem("gis_username", newUser.fullName);
+    } catch { }
 
     return { success: true };
   };

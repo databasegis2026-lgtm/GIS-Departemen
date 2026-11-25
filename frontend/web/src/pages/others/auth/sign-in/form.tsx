@@ -12,7 +12,7 @@ import { EyeCloseIcon, EyeIcon } from "@/icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { signInSchema, type SignInFormData } from "./schema";
 import { useAuth } from "@/context/auth-context";
 
@@ -142,13 +142,8 @@ export default function SignInFormFields() {
         </div>
 
         <p className="text-center text-xs text-gray-500 dark:text-gray-400">
-          Belum punya akun?{" "}
-          <Link
-            to="/signup"
-            className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-          >
-            Daftar Akun Baru
-          </Link>
+          Pendaftaran akun baru hanya dapat dilakukan oleh{" "}
+          <span className="font-semibold text-gray-700 dark:text-gray-300">Superadmin GIS</span>.
         </p>
       </form>
     </div>
