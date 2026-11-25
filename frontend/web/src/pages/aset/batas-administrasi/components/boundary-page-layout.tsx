@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb";
 import { PageMeta } from "@/components/shared/page-meta";
 import { supabase } from "@/lib/supabase";
@@ -35,7 +35,23 @@ export default function BoundaryPageLayout({
   fillOpacity = 0.15,
   tableName,
 }: BoundaryPageLayoutProps) {
-  const [data, setData] = useState<Record<string, any>[]>(initialData);
+  const [data, setData] = useState<Record<string, any>[]>(() => {
+    try {
+      const saved = localStorage.getItem(`gis_data_${tableName}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialData;
+  });
+
+  // Simpan perubahan ke storage persisten lokal browser
+  useEffect(() => {
+    try {
+      localStorage.setItem(`gis_data_${tableName}`, JSON.stringify(data));
+    } catch {}
+  }, [data, tableName]);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modals state
