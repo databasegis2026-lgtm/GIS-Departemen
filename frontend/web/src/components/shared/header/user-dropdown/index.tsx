@@ -19,7 +19,7 @@ import { useAuth } from "@/context/auth-context";
 export default function UserDropdown() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const { currentUser, logout, switchRole, canAccessAudit, canManageUsers } = useAuth();
+  const { currentUser, logout, canAccessAudit, canManageUsers } = useAuth();
 
   const handleSignOut = () => {
     logout();
@@ -103,75 +103,6 @@ export default function UserDropdown() {
             <span>Audit Aktivitas Pengguna</span>
           </DropdownMenuItem>
         )}
-
-        {/* Simulasi Cepat Ganti Role untuk Demonstrasi */}
-        <div className="px-2 py-2">
-          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-gray-400">
-            Pintas Simulasi Role (Testing)
-          </span>
-          <div className="grid grid-cols-2 gap-1 text-[10px]">
-            <button
-              type="button"
-              onClick={() => {
-                switchRole("superadmin");
-                setIsOpen(false);
-              }}
-              className="rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              👑 Superadmin
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                switchRole("admin_gis");
-                setIsOpen(false);
-              }}
-              className="rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              🗺️ Admin GIS
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                switchRole("user_estate");
-                setIsOpen(false);
-              }}
-              className="rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              🌴 User Estate
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                switchRole("admin_kebun");
-                setIsOpen(false);
-              }}
-              className="rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              📋 Admin Kebun
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                switchRole("regional_ho");
-                setIsOpen(false);
-              }}
-              className="rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              🏢 Regional HO
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                switchRole("user_global");
-                setIsOpen(false);
-              }}
-              className="rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              🌐 User Global
-            </button>
-          </div>
-        </div>
 
         <DropdownMenuSeparator />
 
