@@ -147,7 +147,12 @@ export default function BoundaryMapModal({
     }, 200);
 
     return () => {
-      // cleanup on close
+      // Cleanup: destroy map instance so next record re-initializes cleanly
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        polygonLayerRef.current = null;
+      }
     };
   }, [isOpen, basemap, data, strokeColor, strokeWeight, dashArray, fillOpacity, levelName]);
 

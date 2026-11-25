@@ -24,6 +24,17 @@ export interface BoundaryPageLayoutProps {
   tableName: string;
 }
 
+/** Generate UUID v4 yang aman di browser */
+function genUUID(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 export default function BoundaryPageLayout({
   pageTitle,
   levelName,
@@ -36,25 +47,28 @@ export default function BoundaryPageLayout({
 }: BoundaryPageLayoutProps) {
   // Start with empty data — no mock/dummy records
   const [data, setData] = useState<Record<string, any>[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
 
-  // Simpan perubahan ke storage persisten lokal browser
+  // Ambil data dari Supabase saat mount
   useEffect(() => {
-    try {
-      localStorage.setItem(`gis_data_${tableName}`, JSON.stringify(data));
-    } catch {}
-  }, [data, tableName]);
-
-  // Ambil data langsung dari Supabase Cloud
-  useEffect(() => {
+    setLoading(true);
+    setDbError(null);
     supabase
       .from(tableName)
       .select("*")
       .then((res) => {
-        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        if (res.error) {
+          setDbError(`Gagal memuat data: ${res.error.message || JSON.stringify(res.error)}`);
+        } else if (res.data && Array.isArray(res.data)) {
           setData(res.data);
         }
+        setLoading(false);
       })
-      .catch(() => {});
+      .catch((err) => {
+        setDbError(`Koneksi gagal: ${err?.message || "Unknown error"}`);
+        setLoading(false);
+      });
   }, [tableName]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,6 +84,7 @@ export default function BoundaryPageLayout({
     count: number;
     sizeStr: string;
     fileName: string;
+    savedToDb: number;
   } | null>(null);
 
   const [mapModalOpen, setMapModalOpen] = useState(false);
@@ -90,54 +105,57 @@ export default function BoundaryPageLayout({
   }, [data, searchQuery]);
 
   // Handle Add/Edit Submit
-  const handleFormSubmit = (record: Record<string, any>) => {
+  const handleFormSubmit = async (record: Record<string, any>) => {
     if (editingRecord) {
+      // UPDATE — gunakan id dari editingRecord
+      const updated = { ...record };
+      delete updated.id; // jangan kirim id di body PATCH
+      const res = await supabase
+        .from(tableName)
+        .update(updated, { id: `eq.${editingRecord.id}` });
+      if (res.error) {
+        alert(`Gagal update: ${res.error.message || JSON.stringify(res.error)}`);
+        return;
+      }
+      // Update local state
       setData((prev) =>
-        prev.map((item) => (item.id === editingRecord.id ? { ...record, id: item.id } : item))
+        prev.map((item) =>
+          item.id === editingRecord.id ? { ...record, id: editingRecord.id } : item
+        )
       );
-      supabase.from(tableName).update(record, { id: `eq.${editingRecord.id}` }).catch(() => {});
-      supabase
-        .logAudit({
-          action: "UPDATE",
-          table_name: tableName,
-          record_id: String(editingRecord.id),
-          details: `Ubah data ${levelName} ID ${editingRecord.id}`,
-        })
-        .catch(() => {});
     } else {
-      const newId = `${tableName}-${Date.now()}`;
+      // INSERT — gunakan UUID sebagai id
+      const newId = genUUID();
       const newRow = { ...record, id: newId };
-      setData((prev) => [newRow, ...prev]);
-      supabase.from(tableName).insert(newRow).catch(() => {});
-      supabase
-        .logAudit({
-          action: "INSERT",
-          table_name: tableName,
-          record_id: newId,
-          details: `Tambah data ${levelName} baru: ${record[columns[0]] || newId}`,
-        })
-        .catch(() => {});
+      const res = await supabase.from(tableName).insert(newRow);
+      if (res.error) {
+        alert(`Gagal simpan: ${res.error.message || JSON.stringify(res.error)}`);
+        return;
+      }
+      // Gunakan data yang dikembalikan server jika ada, fallback ke local
+      const savedRow =
+        res.data && Array.isArray(res.data) && res.data.length > 0
+          ? res.data[0]
+          : newRow;
+      setData((prev) => [savedRow, ...prev]);
     }
   };
 
   // Handle Delete
-  const handleDelete = (row: Record<string, any>) => {
+  const handleDelete = async (row: Record<string, any>) => {
     const identifier = row[columns[0]] || row[columns[1]] || row.id;
-    if (window.confirm(`Yakin ingin menghapus data ${levelName} "${identifier}"?`)) {
-      setData((prev) => prev.filter((item) => item.id !== row.id));
-      supabase.from(tableName).delete({ id: `eq.${row.id}` }).catch(() => {});
-      supabase
-        .logAudit({
-          action: "DELETE",
-          table_name: tableName,
-          record_id: String(row.id),
-          details: `Hapus baris ${levelName} "${identifier}"`,
-        })
-        .catch(() => {});
+    if (!window.confirm(`Yakin ingin menghapus data ${levelName} "${identifier}"?`)) return;
+
+    const res = await supabase.from(tableName).delete({ id: `eq.${row.id}` });
+    if (res.error) {
+      alert(`Gagal hapus: ${res.error.message || JSON.stringify(res.error)}`);
+      return;
     }
+    // Hapus dari local state hanya jika berhasil di DB
+    setData((prev) => prev.filter((item) => item.id !== row.id));
   };
 
-  // Fungsi ekstraksi umum untuk mengubah objek GeoJSON menjadi data baris riil
+  // Fungsi ekstraksi umum untuk mengubah GeoJSON menjadi data baris
   const extractRecordsFromGeoJson = (geojson: any): Record<string, any>[] => {
     let featureList: any[] = [];
     if (Array.isArray(geojson)) {
@@ -154,10 +172,7 @@ export default function BoundaryPageLayout({
 
     return featureList.map((feat: any, idx: number) => {
       const props = feat.properties || {};
-      const rec: Record<string, any> = {
-        id: `shp-${Date.now()}-${idx + 1}`,
-      };
-
+      const rec: Record<string, any> = { id: genUUID() };
       const propKeys = Object.keys(props);
 
       columns.forEach((col) => {
@@ -169,21 +184,16 @@ export default function BoundaryPageLayout({
             const pkClean = pk.toLowerCase().replace(/_/g, "");
             return pkClean === colClean;
           });
-          if (matchedKey && props[matchedKey] !== undefined) {
-            rec[col] = props[matchedKey];
-          } else {
-            rec[col] = "-";
-          }
+          rec[col] =
+            matchedKey && props[matchedKey] !== undefined ? props[matchedKey] : "-";
         }
       });
 
       propKeys.forEach((k) => {
-        if (rec[k] === undefined) {
-          rec[k] = props[k];
-        }
+        if (rec[k] === undefined) rec[k] = props[k];
       });
 
-      if (feat.geometry && feat.geometry.coordinates) {
+      if (feat.geometry?.coordinates) {
         if (feat.geometry.type === "Polygon") {
           const ring = feat.geometry.coordinates[0];
           if (Array.isArray(ring)) {
@@ -201,7 +211,7 @@ export default function BoundaryPageLayout({
     });
   };
 
-  // Fallback jika parsing gagal — kosongkan tabel, tampilkan pesan
+  // Fallback jika parsing gagal
   const fallbackSimulation = (_sz: string) => {
     setData([]);
     setUploadProgress(0);
@@ -210,7 +220,29 @@ export default function BoundaryPageLayout({
     setIsUploading(false);
   };
 
-  // Handle Upload SHP dengan Real Progress Bar dan Parsing via shpjs
+  // Simpan batch records ke Supabase dan kembalikan jumlah yang berhasil
+  const saveBatchToSupabase = async (
+    records: Record<string, any>[]
+  ): Promise<number> => {
+    if (records.length === 0) return 0;
+    // Hapus field coordinates dari DB (terlalu besar / tidak ada kolom geometry)
+    const dbRecords = records.map((r) => {
+      const { coordinates, ...rest } = r;
+      return rest;
+    });
+
+    // Kirim batch per 50 record untuk hindari payload terlalu besar
+    const BATCH = 50;
+    let saved = 0;
+    for (let i = 0; i < dbRecords.length; i += BATCH) {
+      const chunk = dbRecords.slice(i, i + BATCH);
+      const res = await supabase.from(tableName).insert(chunk);
+      if (!res.error) saved += chunk.length;
+    }
+    return saved;
+  };
+
+  // Handle Upload SHP/GeoJSON
   const handleUploadSubmit = () => {
     if (!uploadedFile) return;
 
@@ -227,9 +259,44 @@ export default function BoundaryPageLayout({
     const isGeoJson =
       uploadedFile.name.endsWith(".geojson") || uploadedFile.name.endsWith(".json");
 
+    const finalize = async (parsedRecords: Record<string, any>[]) => {
+      setUploadProgress(90);
+      setUploadStage(`Menyimpan ${parsedRecords.length} record ke database Supabase...`);
+
+      const savedToDb = await saveBatchToSupabase(parsedRecords);
+
+      // Refresh dari Supabase agar id konsisten dengan yang di DB
+      const freshRes = await supabase.from(tableName).select("*");
+      const finalData =
+        freshRes.data && Array.isArray(freshRes.data)
+          ? freshRes.data
+          : parsedRecords;
+
+      setData(finalData);
+      setUploadProgress(100);
+      setUploadStage(
+        `Selesai! ${parsedRecords.length} poligon diekstrak, ${savedToDb} tersimpan di database.`
+      );
+      setUploadSuccess(true);
+      setImportedSummary({
+        count: parsedRecords.length,
+        sizeStr: sz,
+        fileName: uploadedFile.name,
+        savedToDb,
+      });
+      supabase
+        .logAudit({
+          action: "UPLOAD",
+          table_name: tableName,
+          record_id: uploadedFile.name,
+          details: `Unggah ${levelName} (${uploadedFile.name}, ${sz}) — ${parsedRecords.length} poligon diekstrak, ${savedToDb} tersimpan DB`,
+        })
+        .catch(() => {});
+      setIsUploading(false);
+    };
+
     if (isGeoJson) {
       const reader = new FileReader();
-
       reader.onprogress = (event) => {
         if (event.lengthComputable) {
           const pct = Math.round((event.loaded / event.total) * 60);
@@ -237,57 +304,26 @@ export default function BoundaryPageLayout({
           setUploadStage(`Membaca GeoJSON (${pct}%)...`);
         }
       };
-
       reader.onload = async (e) => {
         try {
           setUploadProgress(75);
           setUploadStage("Mengekstrak fitur geometri & memvalidasi atribut...");
-
           const text = e.target?.result as string;
           const json = JSON.parse(text);
           const parsedRecords = extractRecordsFromGeoJson(json);
-
           if (parsedRecords.length === 0) {
             throw new Error("Berkas GeoJSON tidak memuat fitur poligon spasial yang valid.");
           }
-
-          setUploadProgress(95);
-          setUploadStage(`Menyinkronkan ${parsedRecords.length} data spasial ke tabel & peta...`);
-
-          setTimeout(() => {
-            setData(parsedRecords);
-            setUploadProgress(100);
-            setUploadStage(`Selesai! Berhasil mengimpor ${parsedRecords.length} poligon asli.`);
-            setUploadSuccess(true);
-            setImportedSummary({
-              count: parsedRecords.length,
-              sizeStr: sz,
-              fileName: uploadedFile.name,
-            });
-            supabase
-              .logAudit({
-                action: "UPLOAD",
-                table_name: tableName,
-                record_id: uploadedFile.name,
-                details: `Unggah GeoJSON ${levelName} (${uploadedFile.name}, ${sz}) - ${parsedRecords.length} poligon diekstrak riil`,
-              })
-              .catch(() => {});
-            setIsUploading(false);
-          }, 350);
+          await finalize(parsedRecords);
         } catch (err: any) {
           console.error("Gagal parse GeoJSON:", err);
           fallbackSimulation(sz);
         }
       };
-
-      reader.onerror = () => {
-        fallbackSimulation(sz);
-      };
-
+      reader.onerror = () => fallbackSimulation(sz);
       reader.readAsText(uploadedFile);
     } else {
       const reader = new FileReader();
-
       reader.onprogress = (event) => {
         if (event.lengthComputable) {
           const pct = Math.round((event.loaded / event.total) * 45);
@@ -295,63 +331,29 @@ export default function BoundaryPageLayout({
           setUploadStage(`Membaca arsip biner Shapefile (${pct}%)...`);
         }
       };
-
       reader.onload = async (e) => {
         try {
           setUploadProgress(50);
           setUploadStage("Membongkar arsip ZIP & membaca layer biner (.shp, .dbf, .prj)...");
-
           const arrayBuffer = e.target?.result as ArrayBuffer;
           const shpModule: any = await import("shpjs");
           const shp = shpModule.default || shpModule;
-
-          setUploadProgress(75);
+          setUploadProgress(70);
           setUploadStage("Mengekstrak seluruh poligon geometri dan tabel dBASE (.dbf)...");
-
           const geojson = await shp(arrayBuffer);
-
-          setUploadProgress(88);
+          setUploadProgress(85);
           setUploadStage("Memetakan atribut kolom baku dan koordinat spasial...");
-
           const parsedRecords = extractRecordsFromGeoJson(geojson);
-
-          if (parsedRecords.length > 0) {
-            setUploadProgress(96);
-            setUploadStage(`Menyinkronkan ${parsedRecords.length} data spasial ke tabel & peta...`);
-
-            setTimeout(() => {
-              setData(parsedRecords);
-              setUploadProgress(100);
-              setUploadStage(`Selesai! Berhasil mengimpor ${parsedRecords.length} poligon nyata.`);
-              setUploadSuccess(true);
-              setImportedSummary({
-                count: parsedRecords.length,
-                sizeStr: sz,
-                fileName: uploadedFile.name,
-              });
-              supabase
-                .logAudit({
-                  action: "UPLOAD",
-                  table_name: tableName,
-                  record_id: uploadedFile.name,
-                  details: `Unggah SHP ZIP ${levelName} (${uploadedFile.name}, ${sz}) - ${parsedRecords.length} poligon diekstrak nyata dari berkas`,
-                })
-                .catch(() => {});
-              setIsUploading(false);
-            }, 350);
-          } else {
+          if (parsedRecords.length === 0) {
             throw new Error("Tidak ada fitur poligon valid ditemukan di dalam berkas ZIP SHP.");
           }
+          await finalize(parsedRecords);
         } catch (err: any) {
-          console.error("Gagal parse SHP secara langsung:", err);
+          console.error("Gagal parse SHP:", err);
           fallbackSimulation(sz);
         }
       };
-
-      reader.onerror = () => {
-        fallbackSimulation(sz);
-      };
-
+      reader.onerror = () => fallbackSimulation(sz);
       reader.readAsArrayBuffer(uploadedFile);
     }
   };
@@ -372,8 +374,14 @@ export default function BoundaryPageLayout({
         title={`${pageTitle} | Aset GIS`}
         description={`Manajemen spasial dan data atribut ${pageTitle}`}
       />
-
       <PageBreadcrumb pageTitle={pageTitle} />
+
+      {/* DB Error banner */}
+      {dbError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-xs text-red-700 dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-400">
+          ⚠️ {dbError}
+        </div>
+      )}
 
       {/* Action & Filter Bar */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between -mt-2">
@@ -449,13 +457,23 @@ export default function BoundaryPageLayout({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {filteredData.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={columns.length + 2} className="px-4 py-8 text-center text-xs text-gray-400">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="size-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+                      Memuat data dari Supabase...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td
                     colSpan={columns.length + 2}
                     className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400"
                   >
-                    Belum ada data {pageTitle}. Klik <b>Tambah Data</b> atau <b>Unggah SHP {levelName}</b> untuk memasukkan poligon spasial.
+                    Belum ada data {pageTitle}. Klik <b>Tambah Data</b> atau{" "}
+                    <b>Unggah SHP {levelName}</b> untuk memasukkan poligon spasial.
                   </td>
                 </tr>
               ) : (
@@ -483,7 +501,7 @@ export default function BoundaryPageLayout({
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedMapRecord(row);
+                            setSelectedMapRecord({ ...row });
                             setMapModalOpen(true);
                           }}
                           title="Lihat Poligon di Peta"
@@ -502,7 +520,7 @@ export default function BoundaryPageLayout({
                         <button
                           type="button"
                           onClick={() => {
-                            setEditingRecord(row);
+                            setEditingRecord({ ...row });
                             setFormModalOpen(true);
                           }}
                           title="Edit Data Atribut"
@@ -536,18 +554,24 @@ export default function BoundaryPageLayout({
         </div>
       </div>
 
-      {/* Map Modal */}
-      <BoundaryMapModal
-        isOpen={mapModalOpen}
-        onClose={() => setMapModalOpen(false)}
-        title={selectedMapRecord ? `${pageTitle} - ${selectedMapRecord[columns[0]] || selectedMapRecord[columns[1]] || "Detail"}` : pageTitle}
-        levelName={levelName}
-        data={selectedMapRecord}
-        strokeColor={strokeColor}
-        strokeWeight={strokeWeight}
-        dashArray={dashArray}
-        fillOpacity={fillOpacity}
-      />
+      {/* Map Modal — key berubah tiap record agar Leaflet re-mount */}
+      {mapModalOpen && selectedMapRecord && (
+        <BoundaryMapModal
+          key={selectedMapRecord.id || JSON.stringify(selectedMapRecord).slice(0, 32)}
+          isOpen={mapModalOpen}
+          onClose={() => {
+            setMapModalOpen(false);
+            setSelectedMapRecord(null);
+          }}
+          title={`${pageTitle} — ${selectedMapRecord[columns[0]] || selectedMapRecord[columns[1]] || "Detail"}`}
+          levelName={levelName}
+          data={selectedMapRecord}
+          strokeColor={strokeColor}
+          strokeWeight={strokeWeight}
+          dashArray={dashArray}
+          fillOpacity={fillOpacity}
+        />
+      )}
 
       {/* Form Modal (Add / Edit) */}
       <BoundaryFormModal
@@ -585,10 +609,7 @@ export default function BoundaryPageLayout({
                       }
                     }}
                   />
-                  <label
-                    htmlFor={`file-upload-${tableName}`}
-                    className="flex flex-col items-center cursor-pointer"
-                  >
+                  <label htmlFor={`file-upload-${tableName}`} className="flex flex-col items-center cursor-pointer">
                     <div
                       className="mb-2 size-11 rounded-full flex items-center justify-center text-white shadow-xs"
                       style={{ backgroundColor: strokeColor }}
@@ -638,7 +659,7 @@ export default function BoundaryPageLayout({
                       <polyline points="17 8 12 3 7 8" />
                       <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
-                    <span>Mulai Unggah &amp; Validasi</span>
+                    <span>Mulai Unggah &amp; Simpan ke Database</span>
                   </button>
                 </div>
               </>
@@ -651,21 +672,19 @@ export default function BoundaryPageLayout({
                   <div className="flex items-center gap-2">
                     <div className="size-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
                     <span className="text-xs font-bold text-gray-900 dark:text-white">
-                      Memproses Berkas Spasial...
+                      Memproses &amp; Menyimpan ke Supabase...
                     </span>
                   </div>
                   <span className="font-mono text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
                     {uploadProgress}%
                   </span>
                 </div>
-
                 <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-200 ease-out shadow-xs"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
-
                 <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 font-medium">
                   <span className="truncate pr-2">{uploadStage}</span>
                   <span className="font-mono shrink-0">
@@ -677,7 +696,7 @@ export default function BoundaryPageLayout({
               </div>
             )}
 
-            {/* Keadaan 3: Selesai / Sukses */}
+            {/* Keadaan 3: Selesai */}
             {uploadSuccess && importedSummary && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/30 space-y-4 text-center">
                 <div className="size-12 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-md">
@@ -685,18 +704,19 @@ export default function BoundaryPageLayout({
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
-
                 <div>
                   <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
                     Berkas Spasial Berhasil Diimpor!
                   </h3>
                   <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
-                    <b>{importedSummary.count} poligon spasial</b> dari berkas{" "}
-                    <span className="font-mono font-semibold">{importedSummary.fileName}</span> (
-                    {importedSummary.sizeStr}) telah berhasil dimuat ke dalam tabel dan siap divisualisasikan di peta.
+                    <b>{importedSummary.count} poligon</b> diekstrak dari{" "}
+                    <span className="font-mono font-semibold">{importedSummary.fileName}</span>{" "}
+                    ({importedSummary.sizeStr}).
+                  </p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+                    <b>{importedSummary.savedToDb} record</b> berhasil disimpan ke database Supabase.
                   </p>
                 </div>
-
                 <div className="flex justify-center gap-2 pt-2">
                   <button
                     type="button"
