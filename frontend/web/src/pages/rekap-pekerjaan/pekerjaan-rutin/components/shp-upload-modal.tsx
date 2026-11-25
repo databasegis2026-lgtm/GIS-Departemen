@@ -47,6 +47,15 @@ export default function ShpUploadModal({
       return;
     }
 
+    const validExtensions = [".zip", ".shp", ".dbf", ".shx", ".prj", ".geojson", ".kml", ".kmz", ".json"];
+    const fileNameLower = file.name.toLowerCase();
+    const isValid = validExtensions.some((ext) => fileNameLower.endsWith(ext));
+
+    if (!isValid) {
+      setErrorMsg(`Format berkas tidak valid. Harap unggah paket arsip Shapefile (.zip) atau format spasial (${validExtensions.join(", ")})`);
+      return;
+    }
+
     onUploadSuccess(file);
     setFile(null);
     onClose();
@@ -97,7 +106,7 @@ export default function ShpUploadModal({
           >
             <input
               type="file"
-              accept=".zip,.shp,.geojson,.kml,.json"
+              accept=".zip,.shp,.dbf,.shx,.prj,.geojson,.kml,.kmz,.json"
               onChange={handleFileChange}
               className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
             />
@@ -120,7 +129,13 @@ export default function ShpUploadModal({
                   {file.name}
                 </span>
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Ukuran: {(file.size / 1024).toFixed(1)} KB &bull; Siap dimuat ke Peta Draf
+                  Ukuran:{" "}
+                  {file.size < 1024 * 1024
+                    ? `${(file.size / 1024).toFixed(1)} KB`
+                    : file.size < 1024 * 1024 * 1024
+                    ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+                    : `${(file.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}{" "}
+                  &bull; Siap dimuat ke Peta Draf
                 </span>
               </div>
             ) : (
@@ -129,7 +144,7 @@ export default function ShpUploadModal({
                   Klik untuk jelajah berkas atau tarik ke sini
                 </span>
                 <span className="text-[11px] text-gray-500 dark:text-gray-400 block">
-                  Format didukung: Shapefile (.zip), GeoJSON (.geojson), atau KML (.kml)
+                  Format didukung: Shapefile (.zip, .shp), GeoJSON (.geojson), atau KML (.kml) &bull; Tanpa batasan ukuran file
                 </span>
               </div>
             )}

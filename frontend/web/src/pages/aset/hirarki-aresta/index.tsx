@@ -409,15 +409,14 @@ export default function HirarkiArestaPage() {
                 return (
                   <div key={node.id} className="text-xs">
                     <div
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 transition ${
-                        node.level === 0
-                          ? "bg-gray-100 font-bold text-gray-900 dark:bg-gray-800 dark:text-white"
-                          : node.level === 1
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 transition ${node.level === 0
+                        ? "bg-gray-100 font-bold text-gray-900 dark:bg-gray-800 dark:text-white"
+                        : node.level === 1
                           ? "bg-gray-50 font-semibold text-gray-800 dark:bg-gray-800/60 dark:text-gray-200 ml-4"
                           : node.level === 2
-                          ? "font-medium text-gray-700 dark:text-gray-300 ml-8 hover:bg-gray-50 dark:hover:bg-gray-800/30"
-                          : "text-gray-600 dark:text-gray-400 ml-12 hover:bg-gray-50 dark:hover:bg-gray-800/20"
-                      }`}
+                            ? "font-medium text-gray-700 dark:text-gray-300 ml-8 hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                            : "text-gray-600 dark:text-gray-400 ml-12 hover:bg-gray-50 dark:hover:bg-gray-800/20"
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         {hasChildren ? (
@@ -427,9 +426,8 @@ export default function HirarkiArestaPage() {
                             className="flex h-5 w-5 items-center justify-center rounded text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
                           >
                             <svg
-                              className={`h-3.5 w-3.5 transform transition-transform ${
-                                isExpanded ? "rotate-90" : ""
-                              }`}
+                              className={`h-3.5 w-3.5 transform transition-transform ${isExpanded ? "rotate-90" : ""
+                                }`}
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"
@@ -492,9 +490,8 @@ export default function HirarkiArestaPage() {
                 {flattenedRows.map(({ node }) => (
                   <tr
                     key={node.id}
-                    className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-                      node.level === 0 ? "bg-gray-100/70 font-bold dark:bg-gray-800/80" : ""
-                    }`}
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${node.level === 0 ? "bg-gray-100/70 font-bold dark:bg-gray-800/80" : ""
+                      }`}
                   >
                     <td className="px-4 py-2.5 font-mono text-gray-500 dark:text-gray-400">
                       {node.kode}
@@ -546,14 +543,20 @@ export default function HirarkiArestaPage() {
                       <input
                         type="file"
                         className="sr-only"
-                        accept=".zip,.shp"
+                        accept=".zip,.shp,.dbf,.shx,.prj,.geojson,.kml,.kmz"
                         onChange={(e) => setUploadedShpFile(e.target.files?.[0] || null)}
                       />
                     </label>
                   </div>
                   {uploadedShpFile && (
                     <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      {uploadedShpFile.name} ({(uploadedShpFile.size / 1024).toFixed(1)} KB)
+                      {uploadedShpFile.name} (
+                      {uploadedShpFile.size < 1024 * 1024
+                        ? `${(uploadedShpFile.size / 1024).toFixed(1)} KB`
+                        : uploadedShpFile.size < 1024 * 1024 * 1024
+                          ? `${(uploadedShpFile.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${(uploadedShpFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
+                      )
                     </p>
                   )}
                 </div>

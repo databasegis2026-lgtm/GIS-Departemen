@@ -1,7 +1,8 @@
 /**
  * Supabase Client & PostgREST REST API Adapter
  * Project URL: https://fgczcppoaeojaqliudol.supabase.co
- * Mendukung query PostGIS, GeoJSON, dan filter RLS tanpa ketergantungan paket eksternal
+ * Mendukung query PostGIS, GeoJSON, full CRUD (SELECT, INSERT, UPDATE, DELETE),
+ * Audit Logging ke `gis_audit_logs`, dan tanpa batasan ukuran file saat mengunggah SHP.
  */
 
 export const SUPABASE_URL =
@@ -15,6 +16,16 @@ export interface SupabaseQueryOptions {
   limit?: number;
   offset?: number;
   order?: string;
+}
+
+export interface AuditLogPayload {
+  user_name?: string;
+  action: "INSERT" | "UPDATE" | "DELETE" | "UPLOAD" | "VERIFY";
+  table_name: string;
+  record_id?: string;
+  old_data?: any;
+  new_data?: any;
+  details?: string;
 }
 
 class SupabaseClient {
@@ -31,11 +42,12 @@ class SupabaseClient {
     this.token = token;
   }
 
-  private getHeaders(): HeadersInit {
+  private getHeaders(extraHeaders: Record<string, string> = {}): HeadersInit {
     const headers: Record<string, string> = {
       apikey: this.anonKey,
       "Content-Type": "application/json",
       Prefer: "return=representation",
+      ...extraHeaders,
     };
     if (this.token) {
       headers["Authorization"] = `Bearer ${this.token}`;
@@ -43,21 +55,63 @@ class SupabaseClient {
     return headers;
   }
 
-  async from<T = any>(table: string) {
+  /**
+   * Catat aktivitas ke tabel audit log
+   */
+  async logAudit(payload: AuditLogPayload): Promise<{ data: any; error: any }> {
+    try {
+      const auditTable = `${this.url}/rest/v1/gis_audit_logs`;
+      const res = await fetch(auditTable, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          user_name: payload.user_name || "GIS Specialist",
+          action: payload.action,
+          table_name: payload.table_name,
+          record_id: payload.record_id || null,
+          old_data: payload.old_data || null,
+          new_data: payload.new_data || null,
+          details: payload.details || "",
+          created_at: new Date().toISOString(),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        return { data: null, error: err };
+      }
+      const data = await res.json().catch(() => ({}));
+      return { data, error: null };
+    } catch (err: any) {
+      return { data: null, error: err };
+    }
+  }
+
+  from<T = any>(table: string) {
     const baseUrl = `${this.url}/rest/v1/${table}`;
-    const headers = this.getHeaders();
+    const client = this;
 
     return {
-      select: async (columns = "*", filters: Record<string, string> = {}): Promise<{ data: T[] | null; error: any }> => {
+      /**
+       * SELECT query dengan filter PostgREST
+       */
+      select: async (
+        columns = "*",
+        filters: Record<string, string> = {},
+        options?: { limit?: number; offset?: number; order?: string }
+      ): Promise<{ data: T[] | null; error: any }> => {
         try {
           const params = new URLSearchParams();
           params.append("select", columns);
           Object.entries(filters).forEach(([key, val]) => {
             params.append(key, val);
           });
+          if (options?.limit) params.append("limit", String(options.limit));
+          if (options?.offset) params.append("offset", String(options.offset));
+          if (options?.order) params.append("order", options.order);
 
           const res = await fetch(`${baseUrl}?${params.toString()}`, {
-            headers,
+            headers: client.getHeaders(),
           });
 
           if (!res.ok) {
@@ -72,11 +126,17 @@ class SupabaseClient {
         }
       },
 
-      insert: async (records: Partial<T> | Partial<T>[]): Promise<{ data: T[] | null; error: any }> => {
+      /**
+       * INSERT / UPLOAD data (single atau bulk array)
+       */
+      insert: async (
+        records: Partial<T> | Partial<T>[],
+        auditInfo?: { user?: string; details?: string }
+      ): Promise<{ data: T[] | null; error: any }> => {
         try {
           const res = await fetch(baseUrl, {
             method: "POST",
-            headers,
+            headers: client.getHeaders(),
             body: JSON.stringify(records),
           });
 
@@ -86,17 +146,112 @@ class SupabaseClient {
           }
 
           const data = await res.json();
+
+          // Otomatis audit log
+          client.logAudit({
+            action: Array.isArray(records) && records.length > 1 ? "UPLOAD" : "INSERT",
+            table_name: table,
+            new_data: data,
+            user_name: auditInfo?.user,
+            details: auditInfo?.details || `Insert/Upload ${Array.isArray(records) ? records.length : 1} record(s) ke ${table}`,
+          }).catch(() => {});
+
           return { data, error: null };
         } catch (err: any) {
           return { data: null, error: err };
         }
       },
 
+      /**
+       * UPDATE data dengan filter (HTTP PATCH)
+       */
+      update: async (
+        record: Partial<T>,
+        filters: Record<string, string>,
+        auditInfo?: { user?: string; details?: string }
+      ): Promise<{ data: T[] | null; error: any }> => {
+        try {
+          const params = new URLSearchParams();
+          Object.entries(filters).forEach(([key, val]) => {
+            params.append(key, val);
+          });
+
+          const res = await fetch(`${baseUrl}?${params.toString()}`, {
+            method: "PATCH",
+            headers: client.getHeaders(),
+            body: JSON.stringify(record),
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: res.statusText }));
+            return { data: null, error: err };
+          }
+
+          const data = await res.json();
+
+          // Otomatis audit log
+          client.logAudit({
+            action: "UPDATE",
+            table_name: table,
+            new_data: data,
+            user_name: auditInfo?.user,
+            details: auditInfo?.details || `Update record pada tabel ${table} (filter: ${params.toString()})`,
+          }).catch(() => {});
+
+          return { data, error: null };
+        } catch (err: any) {
+          return { data: null, error: err };
+        }
+      },
+
+      /**
+       * DELETE data dengan filter (HTTP DELETE)
+       */
+      delete: async (
+        filters: Record<string, string>,
+        auditInfo?: { user?: string; details?: string }
+      ): Promise<{ data: T[] | null; error: any }> => {
+        try {
+          const params = new URLSearchParams();
+          Object.entries(filters).forEach(([key, val]) => {
+            params.append(key, val);
+          });
+
+          const res = await fetch(`${baseUrl}?${params.toString()}`, {
+            method: "DELETE",
+            headers: client.getHeaders(),
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: res.statusText }));
+            return { data: null, error: err };
+          }
+
+          const data = await res.json();
+
+          // Otomatis audit log
+          client.logAudit({
+            action: "DELETE",
+            table_name: table,
+            old_data: data,
+            user_name: auditInfo?.user,
+            details: auditInfo?.details || `Delete record dari tabel ${table} (filter: ${params.toString()})`,
+          }).catch(() => {});
+
+          return { data, error: null };
+        } catch (err: any) {
+          return { data: null, error: err };
+        }
+      },
+
+      /**
+       * Panggilan Remote Procedure Call (RPC / Database Function)
+       */
       rpc: async (functionName: string, params: Record<string, any> = {}): Promise<{ data: any; error: any }> => {
         try {
-          const res = await fetch(`${this.url}/rest/v1/rpc/${functionName}`, {
+          const res = await fetch(`${client.url}/rest/v1/rpc/${functionName}`, {
             method: "POST",
-            headers,
+            headers: client.getHeaders(),
             body: JSON.stringify(params),
           });
 

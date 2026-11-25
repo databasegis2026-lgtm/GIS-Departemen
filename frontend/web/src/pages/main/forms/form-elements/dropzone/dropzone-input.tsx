@@ -77,7 +77,7 @@ export default function DropzoneInput() {
       "image/webp": [".webp"],
       "image/svg+xml": [".svg"],
     },
-    maxSize: 5 * 1024 * 1024,
+    // Tanpa batasan ukuran file buatan (unlimited file size)
   });
 
   const getBorderColor = () => {

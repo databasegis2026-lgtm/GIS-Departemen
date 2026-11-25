@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb";
 import { PageMeta } from "@/components/shared/page-meta";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -95,6 +96,13 @@ export default function GRTTPage() {
   const handleSimulateUploadShp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetUploadItem || !uploadedFileName) return;
+
+    supabase.logAudit({
+      action: "UPLOAD",
+      table_name: "pembukaan_lahan_grtt",
+      record_id: targetUploadItem.id,
+      details: `Unggah SHP bidang garapan ${targetUploadItem.nama_penggarap} (Blok ${targetUploadItem.blok_rencana}, ${uploadedFileName})`,
+    }).catch(() => {});
 
     setData((prev) =>
       prev.map((item) => {

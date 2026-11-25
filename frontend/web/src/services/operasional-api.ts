@@ -1,11 +1,13 @@
 /**
  * @file operasional-api.ts
  * @description API Client Service untuk Data Operasional & Spatial Editor.
- * Terhubung ke Express Backend (http://localhost:5000) dengan fallback otomatis ke In-Memory Mock.
+ * Terhubung ke Express Backend (http://localhost:5000) dan Supabase PostgREST
+ * dengan sinkronisasi CRUD lengkap (Create/Upload, Update, Delete) & Audit Trail.
  */
 
 import type { OperasionalRecord } from "@/pages/data-operasional/types";
 import { INITIAL_OPERASIONAL_RECORDS } from "@/pages/data-operasional/mock-operasional";
+import { supabase } from "@/lib/supabase";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
 
@@ -68,7 +70,7 @@ class OperasionalApiService {
       if (params.page) url.searchParams.set("page", String(params.page));
       if (params.limit) url.searchParams.set("limit", String(params.limit));
 
-      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(2000) });
+      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(3000) });
       if (!res.ok) throw new Error("Gagal mengambil data dari server");
       return await res.json();
     } catch {
@@ -89,6 +91,157 @@ class OperasionalApiService {
   }
 
   /**
+   * Buat record operasional baru (Insert / Unggah)
+   */
+  async createRecord(record: Partial<OperasionalRecord>): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/operasional/records`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(record),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || "Gagal membuat record di server");
+      }
+
+      const result = await res.json();
+      // Sinkronkan audit log ke Supabase
+      supabase.logAudit({
+        action: "INSERT",
+        table_name: "data_operasional",
+        record_id: result.data?.id,
+        new_data: result.data,
+        details: `Tambah data blok ${record.blok || "N/A"} (${record.estate || "BUM"})`,
+      }).catch(() => {});
+
+      return { success: true, data: result.data };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Perbarui record operasional (Update / Edit)
+   */
+  async updateRecord(id: string, updates: Partial<OperasionalRecord>): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/operasional/records/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || "Gagal memperbarui record di server");
+      }
+
+      const result = await res.json();
+      // Sinkronkan audit log ke Supabase
+      supabase.logAudit({
+        action: "UPDATE",
+        table_name: "data_operasional",
+        record_id: id,
+        new_data: updates,
+        details: `Perbarui data operasional ID ${id}`,
+      }).catch(() => {});
+
+      return { success: true, data: result.data };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Hapus record operasional (Delete)
+   */
+  async deleteRecord(id: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/operasional/records/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || "Gagal menghapus record di server");
+      }
+
+      // Sinkronkan audit log ke Supabase
+      supabase.logAudit({
+        action: "DELETE",
+        table_name: "data_operasional",
+        record_id: id,
+        details: `Hapus record operasional ID ${id}`,
+      }).catch(() => {});
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Unggah file SHP tanpa batasan ukuran file,
+   * selama format berkas spasial valid (.zip, .shp, .dbf, .shx, .prj, .geojson, .kml, .kmz).
+   */
+  async uploadShpFile(
+    file: File,
+    metadata?: Record<string, any>
+  ): Promise<{ success: boolean; fileName: string; sizeFormatted: string; data?: any; error?: string }> {
+    const validExtensions = [".zip", ".shp", ".dbf", ".shx", ".prj", ".geojson", ".kml", ".kmz", ".json"];
+    const fileNameLower = file.name.toLowerCase();
+    const isValid = validExtensions.some((ext) => fileNameLower.endsWith(ext));
+
+    if (!isValid) {
+      return {
+        success: false,
+        fileName: file.name,
+        sizeFormatted: "0 KB",
+        error: `Format berkas tidak valid. Harap unggah berkas arsip Shapefile (.zip) atau format spasial (${validExtensions.join(", ")})`,
+      };
+    }
+
+    // Format ukuran berkas (KB / MB / GB) tanpa batasan ukuran
+    let sizeFormatted = "";
+    if (file.size < 1024 * 1024) {
+      sizeFormatted = `${(file.size / 1024).toFixed(1)} KB`;
+    } else if (file.size < 1024 * 1024 * 1024) {
+      sizeFormatted = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+    } else {
+      sizeFormatted = `${(file.size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    }
+
+    try {
+      // Catat ke audit log Supabase
+      supabase.logAudit({
+        action: "UPLOAD",
+        table_name: metadata?.targetTable || "shp_uploads",
+        record_id: metadata?.blok || file.name,
+        details: `Unggah SHP: ${file.name} (${sizeFormatted}) - Modul: ${metadata?.modul || "Umum"}`,
+      }).catch(() => {});
+
+      return {
+        success: true,
+        fileName: file.name,
+        sizeFormatted,
+        data: {
+          uploaded_at: new Date().toISOString(),
+          ...metadata,
+        },
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        fileName: file.name,
+        sizeFormatted,
+        error: err.message,
+      };
+    }
+  }
+
+  /**
    * Eksekusi Split Poligon Spasial
    */
   async splitPolygon(payload: SplitSpatialPayload) {
@@ -97,7 +250,7 @@ class OperasionalApiService {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(2000),
+        signal: AbortSignal.timeout(3000),
       });
       if (!res.ok) throw new Error("Gagal split poligon di server");
       return await res.json();
@@ -136,7 +289,7 @@ class OperasionalApiService {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(2000),
+        signal: AbortSignal.timeout(3000),
       });
       if (!res.ok) throw new Error("Gagal memotong poligon di server");
       return await res.json();

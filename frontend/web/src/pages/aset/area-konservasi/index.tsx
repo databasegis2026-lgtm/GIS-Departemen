@@ -130,55 +130,50 @@ export default function AreaKonservasiPage() {
           <button
             type="button"
             onClick={() => setSelectedCategory("semua")}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${
-              selectedCategory === "semua"
-                ? "bg-blue-600 text-white"
-                : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            }`}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${selectedCategory === "semua"
+              ? "bg-blue-600 text-white"
+              : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              }`}
           >
             Semua Kawasan Lindung
           </button>
           <button
             type="button"
             onClick={() => setSelectedCategory("areaHcv")}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${
-              selectedCategory === "areaHcv"
-                ? "bg-blue-600 text-white"
-                : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            }`}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${selectedCategory === "areaHcv"
+              ? "bg-blue-600 text-white"
+              : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              }`}
           >
             Area HCV / NKT
           </button>
           <button
             type="button"
             onClick={() => setSelectedCategory("sapadanSungai")}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${
-              selectedCategory === "sapadanSungai"
-                ? "bg-blue-600 text-white"
-                : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            }`}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${selectedCategory === "sapadanSungai"
+              ? "bg-blue-600 text-white"
+              : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              }`}
           >
             Sempadan Sungai (Riparian)
           </button>
           <button
             type="button"
             onClick={() => setSelectedCategory("kuburanSitusBudaya")}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${
-              selectedCategory === "kuburanSitusBudaya"
-                ? "bg-blue-600 text-white"
-                : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            }`}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${selectedCategory === "kuburanSitusBudaya"
+              ? "bg-blue-600 text-white"
+              : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              }`}
           >
             Kuburan & Situs Budaya Adat
           </button>
           <button
             type="button"
             onClick={() => setSelectedCategory("lokasiMataAir")}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${
-              selectedCategory === "lokasiMataAir"
-                ? "bg-blue-600 text-white"
-                : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            }`}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition ${selectedCategory === "lokasiMataAir"
+              ? "bg-blue-600 text-white"
+              : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              }`}
           >
             Lokasi Mata Air (Catchment)
           </button>
@@ -265,50 +260,49 @@ export default function AreaKonservasiPage() {
                   </tr>
                 ) : (
                   filteredAreas.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3">
-                      <div className="font-bold text-gray-900 dark:text-white">{item.nama_area}</div>
-                      <div className="font-mono text-[11px] text-gray-500 dark:text-gray-400">{item.kode_hcv}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                        {item.kategori_label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 dark:text-white">{item.estate} • {item.afdeling}</div>
-                      <div className="text-[11px] text-gray-500">{item.region}</div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                      {item.luas_ha.toFixed(1)} Ha
-                    </td>
-                    <td className="px-4 py-3 max-w-xs truncate">
-                      {item.tutupan_lahan}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        item.status_patok.startsWith("Terpancang Lengkap")
+                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-4 py-3">
+                        <div className="font-bold text-gray-900 dark:text-white">{item.nama_area}</div>
+                        <div className="font-mono text-[11px] text-gray-500 dark:text-gray-400">{item.kode_hcv}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                          {item.kategori_label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900 dark:text-white">{item.estate} • {item.afdeling}</div>
+                        <div className="text-[11px] text-gray-500">{item.region}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                        {item.luas_ha.toFixed(1)} Ha
+                      </td>
+                      <td className="px-4 py-3 max-w-xs truncate">
+                        {item.tutupan_lahan}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${item.status_patok.startsWith("Terpancang Lengkap")
                           ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
                           : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                      }`}>
-                        {item.status_patok}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-[11px] text-gray-500 dark:text-gray-400">
-                      {item.frekuensi_patroli}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedArea(item)}
-                        className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      >
-                        Detail
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+                          }`}>
+                          {item.status_patok}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[11px] text-gray-500 dark:text-gray-400">
+                        {item.frekuensi_patroli}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedArea(item)}
+                          className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                          Detail
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -397,14 +391,20 @@ export default function AreaKonservasiPage() {
                       <input
                         type="file"
                         className="sr-only"
-                        accept=".zip,.shp"
+                        accept=".zip,.shp,.dbf,.shx,.prj,.geojson,.kml,.kmz"
                         onChange={(e) => setUploadedShpFile(e.target.files?.[0] || null)}
                       />
                     </label>
                   </div>
                   {uploadedShpFile && (
                     <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      {uploadedShpFile.name} ({(uploadedShpFile.size / 1024).toFixed(1)} KB)
+                      {uploadedShpFile.name} (
+                      {uploadedShpFile.size < 1024 * 1024
+                        ? `${(uploadedShpFile.size / 1024).toFixed(1)} KB`
+                        : uploadedShpFile.size < 1024 * 1024 * 1024
+                          ? `${(uploadedShpFile.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${(uploadedShpFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
+                      )
                     </p>
                   )}
                 </div>

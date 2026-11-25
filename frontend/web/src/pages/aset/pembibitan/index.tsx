@@ -278,7 +278,7 @@ export default function PembibitanPage() {
                       </td>
                     </tr>
                   ))
-              )}
+                )}
               </tbody>
             </table>
           </div>
@@ -360,14 +360,20 @@ export default function PembibitanPage() {
                       <input
                         type="file"
                         className="sr-only"
-                        accept=".zip,.shp"
+                        accept=".zip,.shp,.dbf,.shx,.prj,.geojson,.kml,.kmz"
                         onChange={(e) => setUploadedShpFile(e.target.files?.[0] || null)}
                       />
                     </label>
                   </div>
                   {uploadedShpFile && (
                     <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      {uploadedShpFile.name} ({(uploadedShpFile.size / 1024).toFixed(1)} KB)
+                      {uploadedShpFile.name} (
+                      {uploadedShpFile.size < 1024 * 1024
+                        ? `${(uploadedShpFile.size / 1024).toFixed(1)} KB`
+                        : uploadedShpFile.size < 1024 * 1024 * 1024
+                          ? `${(uploadedShpFile.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${(uploadedShpFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
+                      )
                     </p>
                   )}
                 </div>

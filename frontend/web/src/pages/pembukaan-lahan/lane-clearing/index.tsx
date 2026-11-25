@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb";
 import { PageMeta } from "@/components/shared/page-meta";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -102,6 +103,13 @@ export default function LaneClearingPage() {
   const handleSimulateUploadShp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetUploadItem || !uploadedFileName) return;
+
+    supabase.logAudit({
+      action: "UPLOAD",
+      table_name: "pembukaan_lahan_lc",
+      record_id: targetUploadItem.id,
+      details: `Unggah tracking SHP Land Clearing Blok ${targetUploadItem.blok} (${targetUploadItem.kontraktor}, ${uploadedFileName})`,
+    }).catch(() => {});
 
     setData((prev) =>
       prev.map((item) => {

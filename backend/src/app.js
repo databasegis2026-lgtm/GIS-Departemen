@@ -1,6 +1,7 @@
 /**
  * @file app.js
  * @description Inisialisasi Express Application, Middleware, dan Routing API.
+ * Mendukung payload hingga 500MB untuk pemrosesan Shapefile/GeoJSON tanpa batasan file buatan.
  */
 
 const express = require("express");
@@ -10,10 +11,10 @@ const spatialRoutes = require("./routes/spatial.routes");
 
 const app = express();
 
-// Middleware dasar
+// Middleware dasar - Dukung data spasial besar tanpa batasan file buatan (500MB)
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "500mb" }));
+app.use(express.urlencoded({ extended: true, limit: "500mb" }));
 
 // Health Check
 app.get("/health", (req, res) => {

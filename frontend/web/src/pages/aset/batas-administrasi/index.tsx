@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb";
 import { PageMeta } from "@/components/shared/page-meta";
 import { SHP_SCHEMA_DICTIONARY } from "@/data/shp-schema-dictionary";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -542,14 +543,20 @@ export default function BatasAdministrasiPage() {
                                               <input
                                                 type="file"
                                                 className="sr-only"
-                                                accept=".zip,.shp"
+                                                accept=".zip,.shp,.dbf,.shx,.prj,.geojson,.kml,.kmz"
                                                 onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
                                               />
                                             </label>
                                           </div>
                                           {uploadedFile && (
                                             <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                              {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                                              {uploadedFile.name} (
+                                              {uploadedFile.size < 1024 * 1024
+                                                ? `${(uploadedFile.size / 1024).toFixed(1)} KB`
+                                                : uploadedFile.size < 1024 * 1024 * 1024
+                                                ? `${(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB`
+                                                : `${(uploadedFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
+                                              )
                                             </p>
                                           )}
                                         </div>
@@ -567,6 +574,17 @@ export default function BatasAdministrasiPage() {
                                           type="button"
                                           disabled={!uploadedFile}
                                           onClick={() => {
+                                            if (uploadedFile) {
+                                              const sz = uploadedFile.size < 1024 * 1024
+                                                ? `${(uploadedFile.size / 1024).toFixed(1)} KB`
+                                                : `${(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB`;
+                                              supabase.logAudit({
+                                                action: "UPLOAD",
+                                                table_name: `batas_${activeTab}`,
+                                                record_id: uploadedFile.name,
+                                                details: `Unggah SHP ${currentSchema.nama} (${uploadedFile.name}, ${sz})`,
+                                              }).catch(() => {});
+                                            }
                                             alert(`Validasi berhasil! Berkas SHP sesuai dengan skema kolom ${currentSchema.nama} (${currentSchema.kolom.join(" | ")})`);
                                             setShowUploadModal(false);
                                             setUploadedFile(null);

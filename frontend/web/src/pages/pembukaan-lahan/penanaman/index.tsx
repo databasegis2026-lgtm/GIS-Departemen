@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb";
 import { PageMeta } from "@/components/shared/page-meta";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -100,6 +101,13 @@ export default function PenanamanPage() {
   const handleSimulateUploadShp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetUploadItem || !uploadedFileName) return;
+
+    supabase.logAudit({
+      action: "UPLOAD",
+      table_name: "pembukaan_lahan_penanaman",
+      record_id: targetUploadItem.id,
+      details: `Unggah sensus titik pancang/tanam Blok ${targetUploadItem.blok} (${targetUploadItem.varietas_bibit}, ${uploadedFileName})`,
+    }).catch(() => {});
 
     setData((prev) =>
       prev.map((item) => {
