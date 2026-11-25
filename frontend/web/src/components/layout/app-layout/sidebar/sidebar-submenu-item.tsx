@@ -28,58 +28,48 @@ export default function SidebarSubmenuItem({
 
   const [isOpen, setIsOpen] = useState(hasActiveChild || isDirectActive);
 
+  // Buka otomatis hanya ketika URL halaman berubah ke submenu ini pertama kali
   useEffect(() => {
     if (hasActiveChild || isDirectActive) {
       setIsOpen(true);
     }
-  }, [hasActiveChild, isDirectActive]);
+  }, [pathname]);
 
   const labelClassName = cn(
-    "group flex items-center justify-between menu-dropdown-item",
+    "group flex items-center justify-between menu-dropdown-item cursor-pointer",
     isActive ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive",
   );
 
   return (
     <li>
-      {subItem.path ? (
-        <div className="flex items-center justify-between">
-          <Link
-            to={subItem.path}
-            target={subItem.target}
-            className={cn("flex-1", labelClassName)}
-            onClick={() => {
-              if (hasSubItems) {
-                setIsOpen((prev) => !prev);
-              }
-            }}
-          >
-            <span>{t(`items.${subItem.key}`)}</span>
-            {hasSubItems && (
-              <ChevronDownIcon
-                className={cn(
-                  "ms-auto h-4 w-4 shrink-0 transition-transform duration-200",
-                  isOpen ? "rotate-180 text-brand-500" : "",
-                )}
-              />
-            )}
-          </Link>
-        </div>
-      ) : (
+      {hasSubItems ? (
+        /* Jika memiliki sub-items (anak), tombol berfungsi murni untuk toggle buka/tutup */
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className={cn("w-full cursor-pointer text-start", labelClassName)}
+          className={cn("w-full text-start", labelClassName)}
         >
           <span>{t(`items.${subItem.key}`)}</span>
-          {hasSubItems && (
-            <ChevronDownIcon
-              className={cn(
-                "ms-auto h-4 w-4 shrink-0 transition-transform duration-200",
-                isOpen ? "rotate-180 text-brand-500" : "",
-              )}
-            />
-          )}
+          <ChevronDownIcon
+            className={cn(
+              "ms-auto h-4 w-4 shrink-0 transition-transform duration-200",
+              isOpen ? "rotate-180 text-brand-500" : "",
+            )}
+          />
         </button>
+      ) : subItem.path ? (
+        /* Jika daun terakhir (tidak punya anak), Link mengarah ke halaman tujuan */
+        <Link
+          to={subItem.path}
+          target={subItem.target}
+          className={labelClassName}
+        >
+          <span>{t(`items.${subItem.key}`)}</span>
+        </Link>
+      ) : (
+        <div className={labelClassName}>
+          <span>{t(`items.${subItem.key}`)}</span>
+        </div>
       )}
 
       {hasSubItems && isOpen && (
