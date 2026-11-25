@@ -16,7 +16,7 @@ export interface BoundaryPageLayoutProps {
   pageTitle: string;
   levelName: string;
   columns: string[];
-  initialData: Record<string, any>[];
+  initialData?: Record<string, any>[];
   strokeColor: string;
   strokeWeight: number;
   dashArray?: string;
@@ -28,23 +28,14 @@ export default function BoundaryPageLayout({
   pageTitle,
   levelName,
   columns,
-  initialData,
   strokeColor,
   strokeWeight,
   dashArray,
   fillOpacity = 0.15,
   tableName,
 }: BoundaryPageLayoutProps) {
-  const [data, setData] = useState<Record<string, any>[]>(() => {
-    try {
-      const saved = localStorage.getItem(`gis_data_${tableName}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return initialData;
-  });
+  // Start with empty data — no mock/dummy records
+  const [data, setData] = useState<Record<string, any>[]>([]);
 
   // Simpan perubahan ke storage persisten lokal browser
   useEffect(() => {
@@ -53,7 +44,7 @@ export default function BoundaryPageLayout({
     } catch {}
   }, [data, tableName]);
 
-  // Ambil data langsung dari Supabase Cloud jika tabel sudah dibuat
+  // Ambil data langsung dari Supabase Cloud
   useEffect(() => {
     supabase
       .from(tableName)
@@ -65,6 +56,7 @@ export default function BoundaryPageLayout({
       })
       .catch(() => {});
   }, [tableName]);
+
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modals state
@@ -100,7 +92,6 @@ export default function BoundaryPageLayout({
   // Handle Add/Edit Submit
   const handleFormSubmit = (record: Record<string, any>) => {
     if (editingRecord) {
-      // Update
       setData((prev) =>
         prev.map((item) => (item.id === editingRecord.id ? { ...record, id: item.id } : item))
       );
@@ -114,7 +105,6 @@ export default function BoundaryPageLayout({
         })
         .catch(() => {});
     } else {
-      // Create
       const newId = `${tableName}-${Date.now()}`;
       const newRow = { ...record, id: newId };
       setData((prev) => [newRow, ...prev]);
@@ -147,260 +137,7 @@ export default function BoundaryPageLayout({
     }
   };
 
-  // Helper generator untuk mengekstrak atau menyusun data hasil unggahan SHP sesuai levelnya
-  const generateImportedRecordsFromUpload = (fileName: string): Record<string, any>[] => {
-    const defaultCenter: [number, number] = [-1.82, 110.35];
-    const baseName = fileName.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
-
-    if (tableName === "batas_perusahaan") {
-      return [
-        {
-          id: `imp-${Date.now()}-1`,
-          Region: "Region 1, 2, 3",
-          REGIONAL: "Holding PT BUM",
-          Koordinator: "Ari Setyo Wibowo",
-          Luas: 28940.5,
-          KH: "HGU 01/BUM/1998",
-          Perusahaan: "PT BUM",
-          Id: "BUM-ENT-01",
-          coordinates: [
-            [-1.80, 110.32],
-            [-1.80, 110.42],
-            [-1.87, 110.42],
-            [-1.87, 110.32],
-          ],
-        },
-        {
-          id: `imp-${Date.now()}-2`,
-          Region: "BSL",
-          REGIONAL: "Holding PT BSL",
-          Koordinator: "Ari Setyo Wibowo",
-          Luas: 14250.2,
-          KH: "HGU 04/BSL/2005",
-          Perusahaan: "PT BSL",
-          Id: "BSL-ENT-02",
-          coordinates: [
-            [-1.88, 110.33],
-            [-1.88, 110.40],
-            [-1.93, 110.40],
-            [-1.93, 110.33],
-          ],
-        },
-      ];
-    }
-
-    if (tableName === "batas_region") {
-      return [
-        {
-          id: `imp-${Date.now()}-1`,
-          Region: "Region 1",
-          REGIONAL: "REGIONAL 1 (Ketapang Utara)",
-          KOOR_KASIE: "Koor Reg 1",
-        },
-        {
-          id: `imp-${Date.now()}-2`,
-          Region: "Region 2",
-          REGIONAL: "REGIONAL 2 (Ketapang Tengah)",
-          KOOR_KASIE: "Koor Reg 2",
-        },
-        {
-          id: `imp-${Date.now()}-3`,
-          Region: "Region 3",
-          REGIONAL: "REGIONAL 3 (Ketapang Selatan)",
-          KOOR_KASIE: "Koor Reg 3 + BSL",
-        },
-        {
-          id: `imp-${Date.now()}-4`,
-          Region: "BSL",
-          REGIONAL: "REGIONAL BSL (Bumi Sawit Lestari)",
-          KOOR_KASIE: "Koor Reg 3 + BSL",
-        },
-      ];
-    }
-
-    if (tableName === "batas_estate") {
-      return [
-        { id: `imp-${Date.now()}-1`, Region: "Region 1", Estate: "Estate BUM 1", Luas: 3420.5, Kasie: "Kasie BUM 1" },
-        { id: `imp-${Date.now()}-2`, Region: "Region 1", Estate: "Estate BUM 2", Luas: 3810.2, Kasie: "Kasie BUM 2" },
-        { id: `imp-${Date.now()}-3`, Region: "Region 1", Estate: "Estate BUM 3", Luas: 3150.0, Kasie: "Kasie BUM 3" },
-        { id: `imp-${Date.now()}-4`, Region: "Region 2", Estate: "Estate BUM 4", Luas: 4100.8, Kasie: "Kasie BUM 4" },
-        { id: `imp-${Date.now()}-5`, Region: "Region 2", Estate: "Estate BUM 5", Luas: 3670.3, Kasie: "Kasie BUM 5" },
-        { id: `imp-${Date.now()}-6`, Region: "Region 2", Estate: "Estate BUM 6", Luas: 3920.4, Kasie: "Kasie BUM 6" },
-        { id: `imp-${Date.now()}-7`, Region: "Region 3", Estate: "Estate BUM 7", Luas: 3550.1, Kasie: "Kasie BUM 7" },
-        { id: `imp-${Date.now()}-8`, Region: "Region 3", Estate: "Estate BUM 8", Luas: 3280.9, Kasie: "Kasie BUM 8" },
-        { id: `imp-${Date.now()}-9`, Region: "BSL", Estate: "Estate BUM BSL", Luas: 2890.6, Kasie: "Kasie BSL" },
-      ];
-    }
-
-    if (tableName === "batas_afdeling") {
-      return [
-        { id: `imp-${Date.now()}-1`, Region: "Region 1", Estate: "Estate BUM 1", JSPV_1: "JSPV 1", JSPV_2: "JSPV 2", SPV: "SPV A", KASIE: "Kasie BUM 1", AFD: "OA" },
-        { id: `imp-${Date.now()}-2`, Region: "Region 1", Estate: "Estate BUM 1", JSPV_1: "JSPV 1", JSPV_2: "JSPV 2", SPV: "SPV B", KASIE: "Kasie BUM 1", AFD: "OB" },
-        { id: `imp-${Date.now()}-3`, Region: "Region 1", Estate: "Estate BUM 1", JSPV_1: "JSPV 1", JSPV_2: "JSPV 2", SPV: "SPV C", KASIE: "Kasie BUM 1", AFD: "OC" },
-        { id: `imp-${Date.now()}-4`, Region: "Region 1", Estate: "Estate BUM 2", JSPV_1: "JSPV 3", JSPV_2: "JSPV 4", SPV: "SPV D", KASIE: "Kasie BUM 2", AFD: "OD" },
-        { id: `imp-${Date.now()}-5`, Region: "Region 2", Estate: "Estate BUM 4", JSPV_1: "JSPV 5", JSPV_2: "JSPV 6", SPV: "SPV E", KASIE: "Kasie BUM 4", AFD: "OE" },
-      ];
-    }
-
-    if (tableName === "batas_warung") {
-      return [
-        { id: `imp-${Date.now()}-1`, BLOK: "E28", AFD: "OA", ESTATE: "Estate BUM 1", REGION: "Region 1", luas: 28.5, WARUNG: "Warung 1", HARI: "Senin", Drive_Wafd: "https://drive.google.com/..." },
-        { id: `imp-${Date.now()}-2`, BLOK: "E29", AFD: "OA", ESTATE: "Estate BUM 1", REGION: "Region 1", luas: 30.2, WARUNG: "Warung 2", HARI: "Selasa", Drive_Wafd: "https://drive.google.com/..." },
-        { id: `imp-${Date.now()}-3`, BLOK: "F30", AFD: "OB", ESTATE: "Estate BUM 1", REGION: "Region 1", luas: 25.0, WARUNG: "Warung 3", HARI: "Rabu", Drive_Wafd: "https://drive.google.com/..." },
-        { id: `imp-${Date.now()}-4`, BLOK: "F31", AFD: "OB", ESTATE: "Estate BUM 1", REGION: "Region 1", luas: 27.8, WARUNG: "Warung 4", HARI: "Kamis", Drive_Wafd: "https://drive.google.com/..." },
-        { id: `imp-${Date.now()}-5`, BLOK: "G32", AFD: "OC", ESTATE: "Estate BUM 2", REGION: "Region 1", luas: 29.1, WARUNG: "Warung 5", HARI: "Jumat", Drive_Wafd: "https://drive.google.com/..." },
-        { id: `imp-${Date.now()}-6`, BLOK: "G33", AFD: "OC", ESTATE: "Estate BUM 2", REGION: "Region 1", luas: 26.4, WARUNG: "Warung 6", HARI: "Sabtu", Drive_Wafd: "https://drive.google.com/..." },
-      ];
-    }
-
-    if (tableName === "batas_blok") {
-      return [
-        {
-          id: `imp-${Date.now()}-1`,
-          Region: "Region 1",
-          Estate: "Estate BUM 1",
-          Afdeling: "OA",
-          Blok: "E28",
-          TahunTanam: "2015",
-          Luas: 28.5,
-          TM_Pokok: 3840,
-          JSPV_1: "JSPV 1",
-          JSPV_2: "JSPV 2",
-          SPV: "SPV A",
-          KASIE: "Kasie BUM 1",
-          KOOR_KASIE: "Koor Reg 1",
-          AFD: "OA",
-        },
-        {
-          id: `imp-${Date.now()}-2`,
-          Region: "Region 1",
-          Estate: "Estate BUM 1",
-          Afdeling: "OA",
-          Blok: "E29",
-          TahunTanam: "2015",
-          Luas: 30.2,
-          TM_Pokok: 4050,
-          JSPV_1: "JSPV 1",
-          JSPV_2: "JSPV 2",
-          SPV: "SPV A",
-          KASIE: "Kasie BUM 1",
-          KOOR_KASIE: "Koor Reg 1",
-          AFD: "OA",
-        },
-        {
-          id: `imp-${Date.now()}-3`,
-          Region: "Region 1",
-          Estate: "Estate BUM 1",
-          Afdeling: "OB",
-          Blok: "F30",
-          TahunTanam: "2016",
-          Luas: 25.0,
-          TM_Pokok: 3375,
-          JSPV_1: "JSPV 1",
-          JSPV_2: "JSPV 2",
-          SPV: "SPV B",
-          KASIE: "Kasie BUM 1",
-          KOOR_KASIE: "Koor Reg 1",
-          AFD: "OB",
-        },
-        {
-          id: `imp-${Date.now()}-4`,
-          Region: "Region 1",
-          Estate: "Estate BUM 1",
-          Afdeling: "OB",
-          Blok: "F31",
-          TahunTanam: "2016",
-          Luas: 27.8,
-          TM_Pokok: 3750,
-          JSPV_1: "JSPV 1",
-          JSPV_2: "JSPV 2",
-          SPV: "SPV B",
-          KASIE: "Kasie BUM 1",
-          KOOR_KASIE: "Koor Reg 1",
-          AFD: "OB",
-        },
-      ];
-    }
-
-    if (tableName === "batas_ancak") {
-      return [
-        {
-          id: `imp-${Date.now()}-1`,
-          BLOK: "E28",
-          AFD: "OA",
-          ESTATE: "Estate BUM 1",
-          REGION: "Region 1",
-          luas: 1.2,
-          WARUNG: "Warung 1",
-          HARI: "Senin",
-          Drive_Wafd: "https://drive.google.com/...",
-          BLOK_1: "E28",
-          AFD_1: "OA",
-          ESTATE_1: "Estate BUM 1",
-          REGION_1: "Region 1",
-          WARUNG_1: "Warung 1",
-          HARI_1: "Senin",
-          No_Ancak: "ACK-01",
-          Koord_X: "110.3542",
-        },
-        {
-          id: `imp-${Date.now()}-2`,
-          BLOK: "E28",
-          AFD: "OA",
-          ESTATE: "Estate BUM 1",
-          REGION: "Region 1",
-          luas: 1.1,
-          WARUNG: "Warung 1",
-          HARI: "Senin",
-          Drive_Wafd: "https://drive.google.com/...",
-          BLOK_1: "E28",
-          AFD_1: "OA",
-          ESTATE_1: "Estate BUM 1",
-          REGION_1: "Region 1",
-          WARUNG_1: "Warung 1",
-          HARI_1: "Senin",
-          No_Ancak: "ACK-02",
-          Koord_X: "110.3550",
-        },
-        {
-          id: `imp-${Date.now()}-3`,
-          BLOK: "E29",
-          AFD: "OA",
-          ESTATE: "Estate BUM 1",
-          REGION: "Region 1",
-          luas: 1.3,
-          WARUNG: "Warung 2",
-          HARI: "Selasa",
-          Drive_Wafd: "https://drive.google.com/...",
-          BLOK_1: "E29",
-          AFD_1: "OA",
-          ESTATE_1: "Estate BUM 1",
-          REGION_1: "Region 1",
-          WARUNG_1: "Warung 2",
-          HARI_1: "Selasa",
-          No_Ancak: "ACK-03",
-          Koord_X: "110.3558",
-        },
-      ];
-    }
-
-    // Default fallback jika nama tabel lain
-    return [
-      {
-        id: `imp-${Date.now()}-1`,
-        [columns[0]]: `${baseName} 01`,
-        [columns[1] || "Keterangan"]: "Hasil Import SHP",
-        coordinates: [
-          [defaultCenter[0] - 0.01, defaultCenter[1] - 0.01],
-          [defaultCenter[0] - 0.01, defaultCenter[1] + 0.01],
-          [defaultCenter[0] + 0.01, defaultCenter[1] + 0.01],
-          [defaultCenter[0] + 0.01, defaultCenter[1] - 0.01],
-        ],
-      },
-    ];
-  };
-
-  // Fungsi ekstraksi umum untuk mengubah objek GeoJSON (dari .geojson maupun .zip via shpjs) menjadi data baris riil
+  // Fungsi ekstraksi umum untuk mengubah objek GeoJSON menjadi data baris riil
   const extractRecordsFromGeoJson = (geojson: any): Record<string, any>[] => {
     let featureList: any[] = [];
     if (Array.isArray(geojson)) {
@@ -423,7 +160,6 @@ export default function BoundaryPageLayout({
 
       const propKeys = Object.keys(props);
 
-      // Petakan ke kolom baku halaman ini (case-insensitive & pembersihan karakter _)
       columns.forEach((col) => {
         if (props[col] !== undefined) {
           rec[col] = props[col];
@@ -441,14 +177,12 @@ export default function BoundaryPageLayout({
         }
       });
 
-      // Salin juga seluruh atribut asli lainnya agar informasi SHP tidak ada yang terpotong
       propKeys.forEach((k) => {
         if (rec[k] === undefined) {
           rec[k] = props[k];
         }
       });
 
-      // Ekstraksi geometri riil poligon (GeoJSON [lng, lat] -> Leaflet [lat, lng])
       if (feat.geometry && feat.geometry.coordinates) {
         if (feat.geometry.type === "Polygon") {
           const ring = feat.geometry.coordinates[0];
@@ -467,7 +201,16 @@ export default function BoundaryPageLayout({
     });
   };
 
-  // Handle Upload SHP dengan Real Progress Bar Persentase & Parsing Riil via shpjs
+  // Fallback jika parsing gagal — kosongkan tabel, tampilkan pesan
+  const fallbackSimulation = (_sz: string) => {
+    setData([]);
+    setUploadProgress(0);
+    setUploadStage("Gagal membaca berkas. Pastikan format SHP ZIP atau GeoJSON valid.");
+    setUploadSuccess(false);
+    setIsUploading(false);
+  };
+
+  // Handle Upload SHP dengan Real Progress Bar dan Parsing via shpjs
   const handleUploadSubmit = () => {
     if (!uploadedFile) return;
 
@@ -485,7 +228,6 @@ export default function BoundaryPageLayout({
       uploadedFile.name.endsWith(".geojson") || uploadedFile.name.endsWith(".json");
 
     if (isGeoJson) {
-      // 1. Parsing GeoJSON Asli
       const reader = new FileReader();
 
       reader.onprogress = (event) => {
@@ -503,7 +245,6 @@ export default function BoundaryPageLayout({
 
           const text = e.target?.result as string;
           const json = JSON.parse(text);
-
           const parsedRecords = extractRecordsFromGeoJson(json);
 
           if (parsedRecords.length === 0) {
@@ -514,7 +255,6 @@ export default function BoundaryPageLayout({
           setUploadStage(`Menyinkronkan ${parsedRecords.length} data spasial ke tabel & peta...`);
 
           setTimeout(() => {
-            // Ganti data dengan data asli hasil upload (bersihkan dummy sebelumnya)
             setData(parsedRecords);
             setUploadProgress(100);
             setUploadStage(`Selesai! Berhasil mengimpor ${parsedRecords.length} poligon asli.`);
@@ -524,7 +264,6 @@ export default function BoundaryPageLayout({
               sizeStr: sz,
               fileName: uploadedFile.name,
             });
-
             supabase
               .logAudit({
                 action: "UPLOAD",
@@ -533,7 +272,6 @@ export default function BoundaryPageLayout({
                 details: `Unggah GeoJSON ${levelName} (${uploadedFile.name}, ${sz}) - ${parsedRecords.length} poligon diekstrak riil`,
               })
               .catch(() => {});
-
             setIsUploading(false);
           }, 350);
         } catch (err: any) {
@@ -548,7 +286,6 @@ export default function BoundaryPageLayout({
 
       reader.readAsText(uploadedFile);
     } else {
-      // 2. Parsing Berkas Arsip ZIP Shapefile (.zip / .shp) menggunakan shpjs
       const reader = new FileReader();
 
       reader.onprogress = (event) => {
@@ -565,8 +302,6 @@ export default function BoundaryPageLayout({
           setUploadStage("Membongkar arsip ZIP & membaca layer biner (.shp, .dbf, .prj)...");
 
           const arrayBuffer = e.target?.result as ArrayBuffer;
-
-          // Muat pustaka parser Shapefile shpjs
           const shpModule: any = await import("shpjs");
           const shp = shpModule.default || shpModule;
 
@@ -585,7 +320,6 @@ export default function BoundaryPageLayout({
             setUploadStage(`Menyinkronkan ${parsedRecords.length} data spasial ke tabel & peta...`);
 
             setTimeout(() => {
-              // Ganti dengan data asli hasil ekstraksi SHP (menggantikan dummy sebelumnya)
               setData(parsedRecords);
               setUploadProgress(100);
               setUploadStage(`Selesai! Berhasil mengimpor ${parsedRecords.length} poligon nyata.`);
@@ -595,7 +329,6 @@ export default function BoundaryPageLayout({
                 sizeStr: sz,
                 fileName: uploadedFile.name,
               });
-
               supabase
                 .logAudit({
                   action: "UPLOAD",
@@ -604,7 +337,6 @@ export default function BoundaryPageLayout({
                   details: `Unggah SHP ZIP ${levelName} (${uploadedFile.name}, ${sz}) - ${parsedRecords.length} poligon diekstrak nyata dari berkas`,
                 })
                 .catch(() => {});
-
               setIsUploading(false);
             }, 350);
           } else {
@@ -622,54 +354,6 @@ export default function BoundaryPageLayout({
 
       reader.readAsArrayBuffer(uploadedFile);
     }
-  };
-
-  const fallbackSimulation = (sz: string) => {
-    // Animasi progres nyata 0% -> 100% dengan tahapan teknis GIS yang presisi
-    let currentPct = 0;
-    const interval = setInterval(() => {
-      currentPct += Math.floor(Math.random() * 12) + 6;
-
-      if (currentPct < 25) {
-        setUploadStage("Membaca paket arsip SHP & validasi berkas .shp/.dbf/.shx...");
-      } else if (currentPct < 55) {
-        setUploadStage("Memverifikasi proyeksi koordinat CRS (WGS 84 / UTM 49S)...");
-      } else if (currentPct < 85) {
-        setUploadStage("Mengekstrak poligon kadastral & tabel atribut dBASE...");
-      } else if (currentPct < 98) {
-        setUploadStage("Menyinkronkan geometri ke lapisan kanvas peta...");
-      }
-
-      if (currentPct >= 100) {
-        currentPct = 100;
-        clearInterval(interval);
-
-        const newRecords = generateImportedRecordsFromUpload(uploadedFile?.name || "data.shp");
-
-        setData(newRecords);
-        setUploadProgress(100);
-        setUploadStage(`Selesai! ${newRecords.length} poligon spasial berhasil dimuat.`);
-        setUploadSuccess(true);
-        setImportedSummary({
-          count: newRecords.length,
-          sizeStr: sz,
-          fileName: uploadedFile?.name || "data.shp",
-        });
-
-        supabase
-          .logAudit({
-            action: "UPLOAD",
-            table_name: tableName,
-            record_id: uploadedFile?.name || "data.shp",
-            details: `Unggah SHP ${levelName} (${uploadedFile?.name}, ${sz}) - ${newRecords.length} poligon berhasil diimpor`,
-          })
-          .catch(() => {});
-
-        setIsUploading(false);
-      } else {
-        setUploadProgress(currentPct);
-      }
-    }, 120);
   };
 
   const handleCloseUploadModal = () => {
@@ -875,7 +559,7 @@ export default function BoundaryPageLayout({
         levelName={levelName}
       />
 
-      {/* Modal Unggah SHP dengan Progress Bar Persentase Riil & Status */}
+      {/* Modal Unggah SHP */}
       <Dialog open={showUploadModal} onOpenChange={handleCloseUploadModal}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -886,7 +570,7 @@ export default function BoundaryPageLayout({
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
-            {/* Keadaan 1: Belum Unggah / Sedang Memilih File */}
+            {/* Keadaan 1: Belum Unggah */}
             {!isUploading && !uploadSuccess && (
               <>
                 <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 hover:border-emerald-500 transition">
@@ -954,13 +638,13 @@ export default function BoundaryPageLayout({
                       <polyline points="17 8 12 3 7 8" />
                       <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
-                    <span>Mulai Unggah & Validasi</span>
+                    <span>Mulai Unggah &amp; Validasi</span>
                   </button>
                 </div>
               </>
             )}
 
-            {/* Keadaan 2: Sedang Memproses / Mengunggah (Progress Bar Persentase Dinamis) */}
+            {/* Keadaan 2: Sedang Memproses */}
             {isUploading && (
               <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900 space-y-4">
                 <div className="flex items-center justify-between">
@@ -975,7 +659,6 @@ export default function BoundaryPageLayout({
                   </span>
                 </div>
 
-                {/* Progress Track & Bar */}
                 <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-200 ease-out shadow-xs"
@@ -983,7 +666,6 @@ export default function BoundaryPageLayout({
                   />
                 </div>
 
-                {/* Status Stage Detail & File Size */}
                 <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 font-medium">
                   <span className="truncate pr-2">{uploadStage}</span>
                   <span className="font-mono shrink-0">
@@ -995,7 +677,7 @@ export default function BoundaryPageLayout({
               </div>
             )}
 
-            {/* Keadaan 3: Selesai / Sukses Impor */}
+            {/* Keadaan 3: Selesai / Sukses */}
             {uploadSuccess && importedSummary && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/30 space-y-4 text-center">
                 <div className="size-12 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-md">
@@ -1021,7 +703,7 @@ export default function BoundaryPageLayout({
                     onClick={handleCloseUploadModal}
                     className="rounded-lg bg-emerald-600 px-6 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition cursor-pointer shadow-xs"
                   >
-                    Tutup & Lihat Data di Tabel
+                    Tutup &amp; Lihat Data di Tabel
                   </button>
                 </div>
               </div>
