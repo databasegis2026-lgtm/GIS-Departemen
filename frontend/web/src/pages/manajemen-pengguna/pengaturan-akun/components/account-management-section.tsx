@@ -13,15 +13,16 @@ import { CheckCircleIcon, PlusIcon, TrashBinIcon } from "@/icons";
 import { useState } from "react";
 import AddAccountModal, {
   type NewAccountFormData,
-  type UserRole,
 } from "./add-account-modal";
+
+import { REGISTERED_USERS } from "@/context/auth-context";
 
 export interface AccountItem {
   id: string;
   fullName: string;
   username: string;
   email: string;
-  role: UserRole;
+  role: string;
   company: string;
   estate: string;
   phone: string;
@@ -29,80 +30,18 @@ export interface AccountItem {
   joinedDate: string;
 }
 
-const initialAccountsData: AccountItem[] = [
-  {
-    id: "1",
-    fullName: "Rudi Wahyudi",
-    username: "rudi.wahyudi",
-    email: "rudi.wahyudi@gis-departemen.com",
-    role: "superadminGIS",
-    company: "PT BUM (Bangkitgiat Usaha Mandiri)",
-    estate: "Kantor Pusat GIS",
-    phone: "+62 812-3456-7890",
-    status: "active",
-    joinedDate: "10 Jan 2026",
-  },
-  {
-    id: "2",
-    fullName: "Ahmad Hasan",
-    username: "ahmad.hasan",
-    email: "ahmad.hasan@gis-departemen.com",
-    role: "adminGIS",
-    company: "PT BUM (Bangkitgiat Usaha Mandiri)",
-    estate: "Kantor Pusat GIS",
-    phone: "+62 813-8899-1122",
-    status: "active",
-    joinedDate: "15 Feb 2026",
-  },
-  {
-    id: "3",
-    fullName: "Supardi Pratama",
-    username: "supardi.p",
-    email: "supardi.p@gis-departemen.com",
-    role: "Kasie (Asisten Kebun)",
-    company: "PT BUM (Bangkitgiat Usaha Mandiri)",
-    estate: "PT BUM - BUM 1 (Region 1)",
-    phone: "+62 811-2233-4455",
-    status: "active",
-    joinedDate: "01 Mar 2026",
-  },
-  {
-    id: "4",
-    fullName: "Ridwan Syahputra",
-    username: "ridwan.s",
-    email: "ridwan.s@gis-departemen.com",
-    role: "SPV (Supervisor Afdeling)",
-    company: "PT BUM (Bangkitgiat Usaha Mandiri)",
-    estate: "PT BUM - BUM 2 (Region 1)",
-    phone: "+62 812-9988-7766",
-    status: "active",
-    joinedDate: "12 Apr 2026",
-  },
-  {
-    id: "5",
-    fullName: "Bambang Kusuma",
-    username: "bambang.k",
-    email: "bambang.k@gis-departemen.com",
-    role: "userGIS",
-    company: "BSL",
-    estate: "BSL - Estate BSL (Region 3)",
-    phone: "+62 811-5566-7788",
-    status: "active",
-    joinedDate: "20 Mei 2026",
-  },
-  {
-    id: "6",
-    fullName: "Tri Wahyuni",
-    username: "tri.wahyuni",
-    email: "tri.wahyuni@gis-departemen.com",
-    role: "GIS JKO (Pemetaan)",
-    company: "PT BUM (Bangkitgiat Usaha Mandiri)",
-    estate: "PT BUM - BUM 5 (Region 2)",
-    phone: "+62 813-4455-6677",
-    status: "active",
-    joinedDate: "05 Jun 2026",
-  },
-];
+const initialAccountsData: AccountItem[] = REGISTERED_USERS.map((u, idx) => ({
+  id: u.id,
+  fullName: u.fullName,
+  username: u.username,
+  email: `${u.username}@bum-sawit.co.id`,
+  role: u.roleName,
+  company: u.estateScope === "BSL" ? "PT BSL" : "PT BUM",
+  estate: u.estateScope ? `Estate ${u.estateScope}` : u.regionScope ? `Wilayah ${u.regionScope}` : "Kantor Pusat GIS",
+  phone: `+62 811-${String(idx + 1).padStart(2, "0")}00-${String(idx + 1).padStart(4, "0")}`,
+  status: u.status,
+  joinedDate: "01 Jan 2026",
+}));
 
 export default function AccountManagementSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -179,12 +118,12 @@ export default function AccountManagementSection() {
 
   const roleFilterTabs = [
     "Semua",
-    "superadminGIS",
-    "adminGIS",
-    "userGIS",
-    "Kasie (Asisten Kebun)",
-    "SPV (Supervisor Afdeling)",
-    "GIS JKO (Pemetaan)",
+    "Superadmin GIS",
+    "Admin GIS",
+    "User Estate",
+    "User Admin Kebun",
+    "User Regional HO",
+    "User Global",
   ];
 
   const filteredAccounts = accounts.filter((acc) => {
@@ -199,20 +138,25 @@ export default function AccountManagementSection() {
     return matchRole && matchSearch;
   });
 
-  const getRoleBadge = (role: UserRole) => {
+  const getRoleBadge = (role: string) => {
     switch (role) {
+      case "Superadmin GIS":
       case "superadminGIS":
         return <Badge color="primary">{role}</Badge>;
+      case "Admin GIS":
       case "adminGIS":
         return <Badge color="info">{role}</Badge>;
-      case "userGIS":
-        return <Badge color="light">{role}</Badge>;
+      case "User Estate":
       case "Kasie (Asisten Kebun)":
         return <Badge color="success">{role}</Badge>;
+      case "User Admin Kebun":
       case "SPV (Supervisor Afdeling)":
         return <Badge color="warning">{role}</Badge>;
+      case "User Regional HO":
       case "GIS JKO (Pemetaan)":
         return <Badge color="info">{role}</Badge>;
+      default:
+        return <Badge color="light">{role}</Badge>;
     }
   };
 
@@ -259,11 +203,10 @@ export default function AccountManagementSection() {
                 key={tab}
                 type="button"
                 onClick={() => setSelectedRoleFilter(tab)}
-                className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
-                  selectedRoleFilter === tab
-                    ? "bg-brand-500 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                }`}
+                className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${selectedRoleFilter === tab
+                  ? "bg-brand-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  }`}
               >
                 {tab}
               </button>

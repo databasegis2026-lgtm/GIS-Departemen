@@ -114,7 +114,7 @@ class OperasionalApiService {
         record_id: result.data?.id,
         new_data: result.data,
         details: `Tambah data blok ${record.blok || "N/A"} (${record.estate || "BUM"})`,
-      }).catch(() => {});
+      }).catch(() => { });
 
       return { success: true, data: result.data };
     } catch (err: any) {
@@ -146,7 +146,7 @@ class OperasionalApiService {
         record_id: id,
         new_data: updates,
         details: `Perbarui data operasional ID ${id}`,
-      }).catch(() => {});
+      }).catch(() => { });
 
       return { success: true, data: result.data };
     } catch (err: any) {
@@ -174,7 +174,7 @@ class OperasionalApiService {
         table_name: "data_operasional",
         record_id: id,
         details: `Hapus record operasional ID ${id}`,
-      }).catch(() => {});
+      }).catch(() => { });
 
       return { success: true };
     } catch (err: any) {
@@ -220,7 +220,7 @@ class OperasionalApiService {
         table_name: metadata?.targetTable || "shp_uploads",
         record_id: metadata?.blok || file.name,
         details: `Unggah SHP: ${file.name} (${sizeFormatted}) - Modul: ${metadata?.modul || "Umum"}`,
-      }).catch(() => {});
+      }).catch(() => { });
 
       return {
         success: true,

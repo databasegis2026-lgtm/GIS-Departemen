@@ -28,12 +28,19 @@ import PenanamanPage from "@/pages/pembukaan-lahan/penanaman";
 import MonitoringPage from "@/pages/monitoring";
 import AuditAktivitasPage from "@/pages/monitoring/audit-aktivitas";
 import NotifikasiPage from "@/pages/monitoring/notifikasi";
+import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Navigate, Route, Routes } from "react-router";
 
 export default function App() {
   return (
     <Routes>
-      <Route element={<AppLayout />}>
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="/selamat-datang" replace />} />
         <Route path="selamat-datang" element={<SelamatDatangPage />} />
         <Route path="dashboard" element={<DashboardPage />} />

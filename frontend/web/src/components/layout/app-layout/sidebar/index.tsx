@@ -3,40 +3,93 @@ import {
   SidebarContent,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "react-router";
 import { navItems, othersItems, supportItems } from "./data";
 import AppSidebarHeader from "./sidebar-header";
 import SidebarNavGroup from "./sidebar-nav-group";
 import type { MenuType, NavItem } from "./types";
-
-const menuSections: { type: MenuType; labelKey: string; items: NavItem[] }[] = [
-  { type: "main", labelKey: "groups.menu", items: navItems },
-  { type: "support", labelKey: "groups.support", items: supportItems },
-  { type: "others", labelKey: "groups.others", items: othersItems },
-];
-
-const findMatchingSubmenu = (path: string) => {
-  for (const section of menuSections) {
-    for (let index = 0; index < section.items.length; index++) {
-      const nav = section.items[index];
-      const matchesPath = (items: NavItem["subItems"]): boolean =>
-        Boolean(items?.some(
-          (item) => item.path === path || matchesPath(item.subItems),
-        ));
-      if (nav.path === path || matchesPath(nav.subItems)) {
-        return { type: section.type, index };
-      }
-    }
-  }
-  return null;
-};
+import { useAuth } from "@/context/auth-context";
 
 export default function AppSidebar() {
   const { open, isMobile, isHovered } = useSidebar();
   const { pathname } = useLocation();
+  const { isRouteAllowed } = useAuth();
 
   const showContent = open || isHovered || isMobile;
+
+  // Filter menu navigation berdasarkan Role-Based Access Control
+  const filteredNavItems = useMemo(() => {
+    const filterItems = (items: NavItem[]): NavItem[] => {
+      return items
+        .filter((item) => {
+          if (item.path && !isRouteAllowed(item.path)) {
+            return false;
+          }
+          return true;
+        })
+        .map((item) => {
+          if (!item.subItems) return item;
+          const filteredSubs = item.subItems
+            .filter((sub) => !sub.path || isRouteAllowed(sub.path))
+            .map((sub) => {
+              if (!sub.subItems) return sub;
+              return {
+                ...sub,
+                subItems: sub.subItems.filter((sub2) => !sub2.path || isRouteAllowed(sub2.path)),
+              };
+            });
+
+          return {
+            ...item,
+            subItems: filteredSubs,
+          };
+        })
+        .filter((item) => {
+          // Sembunyikan modul jika subItems kosong setelah disaring
+          if (
+            item.subItems &&
+            item.subItems.length === 0 &&
+            (!item.path ||
+              item.path === "/monitoring" ||
+              item.path === "/rekap-pekerjaan" ||
+              item.path === "/aset" ||
+              item.path === "/pembukaan-lahan" ||
+              item.path === "/manajemen-pengguna")
+          ) {
+            return false;
+          }
+          return true;
+        });
+    };
+
+    return filterItems(navItems);
+  }, [isRouteAllowed]);
+
+  const menuSections = useMemo(
+    () => [
+      { type: "main" as MenuType, labelKey: "groups.menu", items: filteredNavItems },
+      { type: "support" as MenuType, labelKey: "groups.support", items: supportItems },
+      { type: "others" as MenuType, labelKey: "groups.others", items: othersItems },
+    ],
+    [filteredNavItems]
+  );
+
+  const findMatchingSubmenu = (path: string) => {
+    for (const section of menuSections) {
+      for (let index = 0; index < section.items.length; index++) {
+        const nav = section.items[index];
+        const matchesPath = (items: NavItem["subItems"]): boolean =>
+          Boolean(items?.some(
+            (item) => item.path === path || matchesPath(item.subItems),
+          ));
+        if (nav.path === path || matchesPath(nav.subItems)) {
+          return { type: section.type, index };
+        }
+      }
+    }
+    return null;
+  };
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: MenuType;
@@ -88,7 +141,6 @@ export default function AppSidebar() {
           </div>
         </nav>
       </SidebarContent>
-
     </Sidebar>
   );
 }

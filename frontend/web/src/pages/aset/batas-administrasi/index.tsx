@@ -484,120 +484,120 @@ export default function BatasAdministrasiPage() {
       </section>
 
       {/* Dictionary Modal */}
-                              {showDictionaryModal && (
-                                <Dialog open={showDictionaryModal} onOpenChange={setShowDictionaryModal}>
-                                  <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-                                    <DialogHeader>
-                                      <DialogTitle>Kamus Standar Kolom SHP Database WebGIS</DialogTitle>
-                                      <DialogDescription>
-                                        Daftar lengkap 18 layer shapefile master dengan susunan nama kolom resmi dibatasi tanda pipa (|)
-                                      </DialogDescription>
-                                    </DialogHeader>
+      {showDictionaryModal && (
+        <Dialog open={showDictionaryModal} onOpenChange={setShowDictionaryModal}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Kamus Standar Kolom SHP Database WebGIS</DialogTitle>
+              <DialogDescription>
+                Daftar lengkap 18 layer shapefile master dengan susunan nama kolom resmi dibatasi tanda pipa (|)
+              </DialogDescription>
+            </DialogHeader>
 
-                                    <div className="space-y-4 py-2 text-xs">
-                                      {Object.entries(SHP_SCHEMA_DICTIONARY).map(([key, schema]) => (
-                                        <div key={key} className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-800/40">
-                                          <div className="flex items-center justify-between">
-                                            <span className="font-bold text-gray-900 dark:text-white">
-                                              {schema.nama} <span className="font-normal text-gray-500">({schema.kategori})</span>
-                                            </span>
-                                            <span className="font-mono text-[11px] text-blue-600 dark:text-blue-400">
-                                              {schema.kolom.length} Kolom
-                                            </span>
-                                          </div>
-                                          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{schema.deskripsi}</p>
-                                          <div className="mt-2 rounded border border-gray-200 bg-white p-2 font-mono text-[11px] text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 overflow-x-auto">
-                                            {schema.kolom.join(" | ")}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-                              )}
+            <div className="space-y-4 py-2 text-xs">
+              {Object.entries(SHP_SCHEMA_DICTIONARY).map(([key, schema]) => (
+                <div key={key} className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-800/40">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {schema.nama} <span className="font-normal text-gray-500">({schema.kategori})</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-blue-600 dark:text-blue-400">
+                      {schema.kolom.length} Kolom
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{schema.deskripsi}</p>
+                  <div className="mt-2 rounded border border-gray-200 bg-white p-2 font-mono text-[11px] text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 overflow-x-auto">
+                    {schema.kolom.join(" | ")}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
-                              {/* Upload SHP Modal */}
-                              {showUploadModal && (
-                                <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-                                  <DialogContent className="max-w-md">
-                                    <DialogHeader>
-                                      <DialogTitle>Unggah SHP Batas Administrasi ({currentSchema.nama})</DialogTitle>
-                                      <DialogDescription>
-                                        Sistem akan memvalidasi apakah kolom SHP/DBF persis memenuhi skema:
-                                        <br />
-                                        <code className="mt-1 block font-mono text-[10px] text-blue-600 dark:text-blue-400 overflow-x-auto">
-                                          {currentSchema.kolom.join(" | ")}
-                                        </code>
-                                      </DialogDescription>
-                                    </DialogHeader>
+      {/* Upload SHP Modal */}
+      {showUploadModal && (
+        <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Unggah SHP Batas Administrasi ({currentSchema.nama})</DialogTitle>
+              <DialogDescription>
+                Sistem akan memvalidasi apakah kolom SHP/DBF persis memenuhi skema:
+                <br />
+                <code className="mt-1 block font-mono text-[10px] text-blue-600 dark:text-blue-400 overflow-x-auto">
+                  {currentSchema.kolom.join(" | ")}
+                </code>
+              </DialogDescription>
+            </DialogHeader>
 
-                                    <div className="space-y-4 py-2">
-                                      <div className="flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 dark:border-gray-700">
-                                        <div className="text-center">
-                                          <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                          </svg>
-                                          <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                                            <label className="cursor-pointer font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                                              Pilih berkas ZIP / SHP
-                                              <input
-                                                type="file"
-                                                className="sr-only"
-                                                accept=".zip,.shp,.dbf,.shx,.prj,.geojson,.kml,.kmz"
-                                                onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
-                                              />
-                                            </label>
-                                          </div>
-                                          {uploadedFile && (
-                                            <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                              {uploadedFile.name} (
-                                              {uploadedFile.size < 1024 * 1024
-                                                ? `${(uploadedFile.size / 1024).toFixed(1)} KB`
-                                                : uploadedFile.size < 1024 * 1024 * 1024
-                                                ? `${(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB`
-                                                : `${(uploadedFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
-                                              )
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
+            <div className="space-y-4 py-2">
+              <div className="flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 dark:border-gray-700">
+                <div className="text-center">
+                  <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                    <label className="cursor-pointer font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+                      Pilih berkas ZIP / SHP
+                      <input
+                        type="file"
+                        className="sr-only"
+                        accept=".zip,.shp,.dbf,.shx,.prj,.geojson,.kml,.kmz"
+                        onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                  </div>
+                  {uploadedFile && (
+                    <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      {uploadedFile.name} (
+                      {uploadedFile.size < 1024 * 1024
+                        ? `${(uploadedFile.size / 1024).toFixed(1)} KB`
+                        : uploadedFile.size < 1024 * 1024 * 1024
+                          ? `${(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${(uploadedFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
+                      )
+                    </p>
+                  )}
+                </div>
+              </div>
 
-                                      <div className="flex justify-end gap-2">
-                                        <button
-                                          type="button"
-                                          onClick={() => setShowUploadModal(false)}
-                                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                                        >
-                                          Batal
-                                        </button>
-                                        <button
-                                          type="button"
-                                          disabled={!uploadedFile}
-                                          onClick={() => {
-                                            if (uploadedFile) {
-                                              const sz = uploadedFile.size < 1024 * 1024
-                                                ? `${(uploadedFile.size / 1024).toFixed(1)} KB`
-                                                : `${(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB`;
-                                              supabase.logAudit({
-                                                action: "UPLOAD",
-                                                table_name: `batas_${activeTab}`,
-                                                record_id: uploadedFile.name,
-                                                details: `Unggah SHP ${currentSchema.nama} (${uploadedFile.name}, ${sz})`,
-                                              }).catch(() => {});
-                                            }
-                                            alert(`Validasi berhasil! Berkas SHP sesuai dengan skema kolom ${currentSchema.nama} (${currentSchema.kolom.join(" | ")})`);
-                                            setShowUploadModal(false);
-                                            setUploadedFile(null);
-                                          }}
-                                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                                        >
-                                          Validasi & Simpan
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-                              )}
-                            </div>
-                          );
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(false)}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={!uploadedFile}
+                  onClick={() => {
+                    if (uploadedFile) {
+                      const sz = uploadedFile.size < 1024 * 1024
+                        ? `${(uploadedFile.size / 1024).toFixed(1)} KB`
+                        : `${(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB`;
+                      supabase.logAudit({
+                        action: "UPLOAD",
+                        table_name: `batas_${activeTab}`,
+                        record_id: uploadedFile.name,
+                        details: `Unggah SHP ${currentSchema.nama} (${uploadedFile.name}, ${sz})`,
+                      }).catch(() => { });
+                    }
+                    alert(`Validasi berhasil! Berkas SHP sesuai dengan skema kolom ${currentSchema.nama} (${currentSchema.kolom.join(" | ")})`);
+                    setShowUploadModal(false);
+                    setUploadedFile(null);
+                  }}
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  Validasi & Simpan
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
 }

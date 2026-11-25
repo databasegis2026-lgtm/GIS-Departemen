@@ -263,13 +263,12 @@ export default function EmplasmentPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            item.kondisi_fisik === "Sangat Baik"
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                              : item.kondisi_fisik === "Baik"
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${item.kondisi_fisik === "Sangat Baik"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                            : item.kondisi_fisik === "Baik"
                               ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
                               : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                          }`}
+                            }`}
                         >
                           {item.kondisi_fisik}
                         </span>
@@ -390,8 +389,8 @@ export default function EmplasmentPage() {
                       {uploadedShpFile.size < 1024 * 1024
                         ? `${(uploadedShpFile.size / 1024).toFixed(1)} KB`
                         : uploadedShpFile.size < 1024 * 1024 * 1024
-                        ? `${(uploadedShpFile.size / (1024 * 1024)).toFixed(2)} MB`
-                        : `${(uploadedShpFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
+                          ? `${(uploadedShpFile.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${(uploadedShpFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
                       )
                     </p>
                   )}

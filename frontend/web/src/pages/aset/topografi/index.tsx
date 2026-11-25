@@ -216,63 +216,63 @@ export default function TopografiPage() {
                   </tr>
                 ) : (
                   filteredBlocks.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3">
-                      <div className="font-bold text-gray-900 dark:text-white">Blok {item.blok}</div>
-                      <div className="text-[11px] text-gray-500">{item.estate} • {item.afdeling}</div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {item.luas_blok_ha.toFixed(1)} Ha
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="font-medium text-gray-900 dark:text-white">{item.elevasi_rata_m} m dpl</div>
-                      <div className="text-[10px] text-gray-500">({item.elevasi_min_m} - {item.elevasi_max_m} m)</div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
-                      {item.kelerengan_pct}%
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${item.kelas_lereng.startsWith("Datar")
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                        : item.kelas_lereng.startsWith("Bergelombang")
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                          : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400"
-                        }`}>
-                        {item.kelas_lereng}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {item.sph_rekomendasi > 0 ? (
-                        <span className="font-bold text-gray-900 dark:text-white">{item.sph_rekomendasi} pkk/Ha</span>
-                      ) : (
-                        <span className="text-[11px] font-bold text-red-600 dark:text-red-400">0 (HCV)</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {item.panjang_teras_kontur_m > 0 ? `${item.panjang_teras_kontur_m.toLocaleString("id-ID")} m` : "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${item.status_kesesuaian_lahan.startsWith("Sesuai (S1)")
-                        ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                        : item.status_kesesuaian_lahan.startsWith("Sesuai Bersyarat")
-                          ? "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
-                          : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-                        }`}>
-                        {item.status_kesesuaian_lahan}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBlock(item)}
-                        className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      >
-                        Detail
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-4 py-3">
+                        <div className="font-bold text-gray-900 dark:text-white">Blok {item.blok}</div>
+                        <div className="text-[11px] text-gray-500">{item.estate} • {item.afdeling}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {item.luas_blok_ha.toFixed(1)} Ha
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="font-medium text-gray-900 dark:text-white">{item.elevasi_rata_m} m dpl</div>
+                        <div className="text-[10px] text-gray-500">({item.elevasi_min_m} - {item.elevasi_max_m} m)</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                        {item.kelerengan_pct}%
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${item.kelas_lereng.startsWith("Datar")
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                          : item.kelas_lereng.startsWith("Bergelombang")
+                            ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                            : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+                          }`}>
+                          {item.kelas_lereng}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {item.sph_rekomendasi > 0 ? (
+                          <span className="font-bold text-gray-900 dark:text-white">{item.sph_rekomendasi} pkk/Ha</span>
+                        ) : (
+                          <span className="text-[11px] font-bold text-red-600 dark:text-red-400">0 (HCV)</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {item.panjang_teras_kontur_m > 0 ? `${item.panjang_teras_kontur_m.toLocaleString("id-ID")} m` : "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${item.status_kesesuaian_lahan.startsWith("Sesuai (S1)")
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                          : item.status_kesesuaian_lahan.startsWith("Sesuai Bersyarat")
+                            ? "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
+                            : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                          }`}>
+                          {item.status_kesesuaian_lahan}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBlock(item)}
+                          className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                          Detail
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -371,8 +371,8 @@ export default function TopografiPage() {
                       {uploadedShpFile.size < 1024 * 1024
                         ? `${(uploadedShpFile.size / 1024).toFixed(1)} KB`
                         : uploadedShpFile.size < 1024 * 1024 * 1024
-                        ? `${(uploadedShpFile.size / (1024 * 1024)).toFixed(2)} MB`
-                        : `${(uploadedShpFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
+                          ? `${(uploadedShpFile.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${(uploadedShpFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
                       )
                     </p>
                   )}

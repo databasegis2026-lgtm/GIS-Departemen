@@ -1,27 +1,21 @@
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb";
 import { PageMeta } from "@/components/shared/page-meta";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import AccountManagementSection from "./components/account-management-section";
-import DangerZoneSection from "./components/danger-zone-section";
-import GisPreferencesSection from "./components/gis-preferences-section";
 import ProfileInfoSection from "./components/profile-info-section";
 import SecuritySection from "./components/security-section";
+import { useAuth } from "@/context/auth-context";
 
 type SettingsTab =
   | "all"
   | "accounts"
   | "profile"
-  | "security"
-  | "preferences"
-  | "danger";
+  | "security";
 
 export default function PengaturanAkunPage() {
-  const [userName, setUserName] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("gis_username") || "Rudi Wahyudi";
-    }
-    return "Rudi Wahyudi";
-  });
+  const { currentUser, canManageUsers } = useAuth();
+
+  const [userName, setUserName] = useState(() => currentUser.fullName);
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("all");
 
@@ -32,14 +26,26 @@ export default function PengaturanAkunPage() {
     }
   };
 
-  const tabs: { id: SettingsTab; label: string }[] = [
-    { id: "all", label: "Semua Pengaturan" },
-    { id: "accounts", label: "Kelola & Tambah Akun" },
-    { id: "profile", label: "Data Diri & Kedinasan" },
-    { id: "security", label: "Keamanan & Sandi" },
-    { id: "preferences", label: "Preferensi GIS" },
-    { id: "danger", label: "Zona Bahaya" },
-  ];
+  // Saring tabs berdasarkan hak akses role (Preferensi GIS & Zona Bahaya disembunyikan untuk SEMUA role)
+  const tabs = useMemo(() => {
+    const list: { id: SettingsTab; label: string }[] = [
+      { id: "all", label: "Semua Pengaturan" },
+    ];
+
+    // Kelola & Tambah Akun HANYA untuk Superadmin
+    if (canManageUsers()) {
+      list.push({ id: "accounts", label: "Kelola & Tambah Akun" });
+    }
+
+    list.push({ id: "profile", label: "Data Diri & Kedinasan" });
+
+    // Keamanan & Sandi disembunyikan untuk User Estate & Admin Kebun
+    if (currentUser.roleKey !== "user_estate" && currentUser.roleKey !== "admin_kebun") {
+      list.push({ id: "security", label: "Keamanan & Sandi" });
+    }
+
+    return list;
+  }, [canManageUsers, currentUser.roleKey]);
 
   return (
     <div className="space-y-6">
@@ -57,11 +63,10 @@ export default function PengaturanAkunPage() {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`cursor-pointer rounded-xl px-4 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === tab.id
-                ? "bg-brand-500 text-white shadow-theme-xs"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
-            }`}
+            className={`cursor-pointer rounded-xl px-4 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${activeTab === tab.id
+              ? "bg-brand-500 text-white shadow-theme-xs"
+              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+              }`}
           >
             {tab.label}
           </button>
@@ -70,7 +75,7 @@ export default function PengaturanAkunPage() {
 
       {/* Content Sections */}
       <div className="space-y-6">
-        {(activeTab === "all" || activeTab === "accounts") && (
+        {canManageUsers() && (activeTab === "all" || activeTab === "accounts") && (
           <AccountManagementSection />
         )}
 
@@ -81,17 +86,11 @@ export default function PengaturanAkunPage() {
           />
         )}
 
-        {(activeTab === "all" || activeTab === "security") && (
-          <SecuritySection />
-        )}
-
-        {(activeTab === "all" || activeTab === "preferences") && (
-          <GisPreferencesSection />
-        )}
-
-        {(activeTab === "all" || activeTab === "danger") && (
-          <DangerZoneSection />
-        )}
+        {currentUser.roleKey !== "user_estate" &&
+          currentUser.roleKey !== "admin_kebun" &&
+          (activeTab === "all" || activeTab === "security") && (
+            <SecuritySection />
+          )}
       </div>
     </div>
   );
