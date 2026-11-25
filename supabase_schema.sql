@@ -49,6 +49,9 @@ create table if not exists public.gis_users (
   created_at timestamptz default now()
 );
 
+alter table public.gis_users add column if not exists role_id int references public.user_roles(role_id) on delete set null;
+alter table public.gis_users add column if not exists created_by text references public.gis_users(id) on delete set null;
+
 -- Seed 22+ Akun Resmi Terdaftar (Hanya Superadmin yang dapat menambah akun baru via aplikasi)
 insert into public.gis_users (id, username, password, full_name, title, role_id, role_key, role_name, staff_code, estate_scope, region_scope, status) values
   -- 1. Superadmin
@@ -243,36 +246,11 @@ create table if not exists public.batas_ancak (
   created_at timestamptz default now()
 );
 
--- 9. Tabel Akun Pengguna Riil (gis_users)
-create table if not exists public.gis_users (
-  id text primary key,
-  username text unique not null,
-  password text not null,
-  full_name text not null,
-  title text default 'Staf Operasional GIS',
-  role_key text default 'user_global',
-  role_name text default 'User Global',
-  staff_code text,
-  estate_scope text,
-  region_scope text,
-  status text default 'active',
-  created_at timestamptz default now()
-);
 -- ------------------------------------------------------------------------------
 -- 4. PENGAMANAN & INDEX RELASI
 -- ------------------------------------------------------------------------------
 
-create index if not exists idx_gis_users_username on public.gis_users(username);
-create index if not exists idx_gis_users_role on public.gis_users(role_id);
-create index if not exists idx_batas_region_perusahaan on public.batas_region(perusahaan_id);
-create index if not exists idx_batas_estate_region on public.batas_estate(region_id);
-create index if not exists idx_batas_afdeling_estate on public.batas_afdeling(estate_id);
-create index if not exists idx_batas_warung_afdeling on public.batas_warung(afdeling_id);
-create index if not exists idx_batas_blok_warung on public.batas_blok(warung_id);
-create index if not exists idx_batas_blok_afdeling on public.batas_blok(afdeling_id);
-create index if not exists idx_batas_ancak_blok on public.batas_ancak(blok_id);
-
--- Jika tabel sudah terbuat sebelumnya tanpa kolom relasi, tambahkan secara aman:
+-- Jika tabel sudah terbuat sebelumnya tanpa kolom relasi, tambahkan secara aman TERLEBIH DAHULU:
 alter table public.gis_users add column if not exists role_id int references public.user_roles(role_id) on delete set null;
 alter table public.gis_users add column if not exists created_by text references public.gis_users(id) on delete set null;
 alter table public.gis_audit_logs add column if not exists user_id text references public.gis_users(id) on delete set null;
@@ -286,6 +264,16 @@ alter table public.batas_blok add column if not exists afdeling_id text referenc
 alter table public.batas_blok add column if not exists estate_id text references public.batas_estate(id) on delete set null;
 alter table public.batas_ancak add column if not exists blok_id text references public.batas_blok(id) on delete set null;
 alter table public.batas_ancak add column if not exists warung_id text references public.batas_warung(id) on delete set null;
+
+create index if not exists idx_gis_users_username on public.gis_users(username);
+create index if not exists idx_gis_users_role on public.gis_users(role_id);
+create index if not exists idx_batas_region_perusahaan on public.batas_region(perusahaan_id);
+create index if not exists idx_batas_estate_region on public.batas_estate(region_id);
+create index if not exists idx_batas_afdeling_estate on public.batas_afdeling(estate_id);
+create index if not exists idx_batas_warung_afdeling on public.batas_warung(afdeling_id);
+create index if not exists idx_batas_blok_warung on public.batas_blok(warung_id);
+create index if not exists idx_batas_blok_afdeling on public.batas_blok(afdeling_id);
+create index if not exists idx_batas_ancak_blok on public.batas_ancak(blok_id);
 
 -- Aktifkan Row Level Security (RLS)
 alter table public.user_roles enable row level security;
