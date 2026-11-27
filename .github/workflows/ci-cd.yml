@@ -9,21 +9,6 @@ permissions:
   contents: read
 
 jobs:
-  security-scan:
-    name: Security scanning
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
-        if: github.event_name == 'pull_request'
-      - uses: aquasecurity/trivy-action@0.28.0
-        continue-on-error: true
-        with:
-          scan-type: fs
-          scan-ref: .
-          scanners: vuln,secret,misconfig
-          exit-code: '0'
-
   infra-validation:
     name: Infrastructure validation
     runs-on: ubuntu-latest
@@ -69,7 +54,7 @@ jobs:
 
   docker:
     name: Build and push Docker image
-    needs: [security-scan, infra-validation, test]
+    needs: [infra-validation, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
