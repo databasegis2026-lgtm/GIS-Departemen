@@ -29,6 +29,12 @@ import AfdelingBlockMapModal from "./components/afdeling-block-map-modal";
 import { printLaporanOperasional, printPetaKartografi } from "./print-operasional";
 import { supabase } from "@/lib/supabase";
 import * as turf from "@turf/turf";
+import { useAuth } from "@/context/auth-context";
+import {
+  generateBlockCompositeKey,
+  getCompanyForEstate,
+  isTransactionCutoffLocked,
+} from "./tata-kelola-operasional";
 
 const OPERASIONAL_TABLE_MAP: Record<OperasionalRecord["aktivitas"], string> = {
   produksi: "produksi",
@@ -60,6 +66,7 @@ function getTabFromPath(pathname: string): AktivitasType {
 function toDbPayload(r: OperasionalRecord) {
   return {
     id: r.id,
+    company: r.company || getCompanyForEstate(r.estate),
     region: r.region,
     estate: r.estate,
     afdeling: r.afdeling,
@@ -75,6 +82,12 @@ function toDbPayload(r: OperasionalRecord) {
     periode: r.periode,
     tanggal: r.tanggal,
     keterangan: r.keterangan,
+    kuota_revisi: r.kuota_revisi ?? 2,
+    revisi_ke: r.revisi_ke ?? 0,
+    is_locked: r.is_locked ?? false,
+    alasan_revisi: r.alasan_revisi || null,
+    direvisi_oleh: r.direvisi_oleh || null,
+    waktu_revisi: r.waktu_revisi || null,
     coordinates: r.rawGeometry || (r.polygonCoords
       ? {
           type: "Polygon",
@@ -91,6 +104,11 @@ export default function DataOperasionalPage({
 } = {}) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const isAdminGis = currentUser?.roleKey === "admin_gis" || currentUser?.roleKey === "superadmin";
+
+  // Filter Multi-Company (PT BUM vs PT BSL)
+  const [selectedCompany, setSelectedCompany] = useState<string>("all");
 
   // Ambil tab aktif langsung dari URL atau prop forcedAktivitas secara sinkron
   const currentTabFromUrl = useMemo(
@@ -141,7 +159,7 @@ export default function DataOperasionalPage({
       const { data, error } = await supabase
         .from(targetTable)
         .select(
-          "id,region,estate,afdeling,blok,warung,luas_ha,realisasi_luas_ha,capaian_persen,sph,kondisi,kontraktor,update_peta,periode,tanggal,keterangan,coordinates",
+          "id,company,region,estate,afdeling,blok,warung,luas_ha,realisasi_luas_ha,capaian_persen,sph,kondisi,kontraktor,update_peta,periode,tanggal,keterangan,coordinates,kuota_revisi,revisi_ke,is_locked,alasan_revisi,direvisi_oleh,waktu_revisi",
           {},
           { limit: 3000 }
         );
@@ -184,6 +202,7 @@ export default function DataOperasionalPage({
 
           return {
             id: row.id,
+            company: row.company || getCompanyForEstate(row.estate || "BUM 1"),
             region: row.region || "REGION 1",
             estate: row.estate || "BUM 1",
             afdeling: row.afdeling || "AFD 1",
@@ -202,6 +221,12 @@ export default function DataOperasionalPage({
             aktivitas: act,
             polygonCoords: coords,
             rawGeometry: row.coordinates,
+            kuota_revisi: row.kuota_revisi !== undefined ? Number(row.kuota_revisi) : 2,
+            revisi_ke: Number(row.revisi_ke ?? 0),
+            is_locked: Boolean(row.is_locked),
+            alasan_revisi: row.alasan_revisi || "",
+            direvisi_oleh: row.direvisi_oleh || "",
+            waktu_revisi: row.waktu_revisi || "",
           };
         });
 
@@ -283,6 +308,11 @@ export default function DataOperasionalPage({
   // Filter Data Komprehensif (Region, Estate, Afdeling, Blok, Tahun, Tipe, Kondisi, Query)
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
+      // Filter Perusahaan (PT BUM vs PT BSL)
+      if (selectedCompany !== "all") {
+        const comp = r.company || getCompanyForEstate(r.estate);
+        if (comp !== selectedCompany) return false;
+      }
       // Filter tab / tipe
       const effectiveType = selectedType !== "all" ? selectedType : activeTab;
       if (effectiveType !== "all" && r.aktivitas !== effectiveType) {
@@ -504,27 +534,155 @@ export default function DataOperasionalPage({
 
       for (const [tableName, groupRecords] of Object.entries(groupedByTable)) {
         try {
-          const rowsToInsert = groupRecords.map(toDbPayload);
-          const BATCH_SIZE = 100;
-          let insertedCount = 0;
-          const failedBatches: string[] = [];
+          // 1. Ambil data yang sudah ada di database untuk tabel ini (Composite Key matching)
+          const { data: existingRows } = await supabase
+            .from(tableName)
+            .select("id,company,region,estate,afdeling,blok,periode,tanggal,kuota_revisi,revisi_ke,is_locked,coordinates,luas_ha,kondisi", {}, { limit: 5000 });
 
-          for (let i = 0; i < rowsToInsert.length; i += BATCH_SIZE) {
-            const batch = rowsToInsert.slice(i, i + BATCH_SIZE);
-            const { error } = await supabase.from(tableName).insert(batch);
-            if (error) {
-              failedBatches.push(`Baris ${i + 1}-${i + batch.length}: ${error.message || JSON.stringify(error)}`);
+          const existingMap = new Map<string, any>();
+          if (Array.isArray(existingRows)) {
+            existingRows.forEach((row: any) => {
+              const compKey = generateBlockCompositeKey(
+                row.company || getCompanyForEstate(row.estate),
+                row.estate,
+                row.afdeling,
+                row.blok,
+                row.periode
+              );
+              existingMap.set(compKey, row);
+            });
+          }
+
+          const recordsToInsert: any[] = [];
+          const recordsToUpdate: { id: string; payload: any; oldRecord: any }[] = [];
+          const blockedCutoff: string[] = [];
+          const blockedNonAdmin: string[] = [];
+          const blockedExceededQuota: string[] = [];
+
+          groupRecords.forEach((rec) => {
+            const compKey = generateBlockCompositeKey(
+              rec.company || getCompanyForEstate(rec.estate),
+              rec.estate,
+              rec.afdeling,
+              rec.blok,
+              rec.periode
+            );
+            const existing = existingMap.get(compKey);
+
+            if (!existing) {
+              // DATA BARU: Insert
+              recordsToInsert.push(toDbPayload(rec));
             } else {
+              // DATA SUDAH ADA: Periksa aturan tata kelola
+              // A. Cek Cut-off tanggal 25
+              if (isTransactionCutoffLocked(existing.tanggal)) {
+                blockedCutoff.push(`Blok ${rec.blok} (Terkunci Cut-off tgl 25)`);
+                return;
+              }
+
+              // B. Cek Hak Akses (Hanya Admin GIS yang berhak merevisi data yang sudah ada)
+              if (!isAdminGis) {
+                blockedNonAdmin.push(`Blok ${rec.blok} (Hanya Admin GIS yang berhak revisi)`);
+                return;
+              }
+
+              // C. Cek Kuota Revisi (Internal kuota = 2)
+              const currentQuota = existing.kuota_revisi !== undefined ? Number(existing.kuota_revisi) : 2;
+              if (currentQuota <= 0 || existing.is_locked) {
+                blockedExceededQuota.push(`Blok ${rec.blok} (Batas kuota revisi habis / Terkunci permanen)`);
+                return;
+              }
+
+              const nextRevisiKe = (Number(existing.revisi_ke) || 0) + 1;
+              const remainingQuota = currentQuota - 1;
+              const isLockedFinal = remainingQuota <= 0;
+
+              recordsToUpdate.push({
+                id: existing.id,
+                oldRecord: existing,
+                payload: {
+                  ...toDbPayload(rec),
+                  id: existing.id,
+                  kuota_revisi: remainingQuota,
+                  revisi_ke: nextRevisiKe,
+                  is_locked: isLockedFinal,
+                  alasan_revisi: `Revisi Spasial ke-${nextRevisiKe} oleh Admin GIS dari berkas ${fileName}`,
+                  direvisi_oleh: currentUser?.fullName || "Admin GIS",
+                  waktu_revisi: new Date().toISOString(),
+                },
+              });
+            }
+          });
+
+          // 2. Eksekusi INSERT untuk record baru
+          let insertedCount = 0;
+          const BATCH_SIZE = 100;
+          for (let i = 0; i < recordsToInsert.length; i += BATCH_SIZE) {
+            const batch = recordsToInsert.slice(i, i + BATCH_SIZE);
+            const { error } = await supabase.from(tableName).insert(batch);
+            if (!error) {
               insertedCount += batch.length;
               totalInserted += batch.length;
             }
           }
 
-          if (failedBatches.length > 0) {
-            dbErrors.push(`${tableName}: ${failedBatches.join("; ")} (Berhasil ${insertedCount}/${groupRecords.length})`);
-          } else {
-            syncedTables.push(`${tableName} (${insertedCount} baris)`);
+          // 3. Eksekusi UPDATE & Simpan Snapshot Riwayat untuk record yang direvisi
+          let updatedCount = 0;
+          for (const item of recordsToUpdate) {
+            const { error: updErr } = await supabase.from(tableName).update(item.payload, { id: `eq.${item.id}` });
+            if (!updErr) {
+              updatedCount += 1;
+              totalInserted += 1;
+
+              // Simpan Snapshot Riwayat ke audit log & localStorage
+              const snapshotData = {
+                id: `snap-${Date.now()}-${item.payload.blok}`,
+                record_id: item.id,
+                aktivitas: item.payload.aktivitas,
+                company: item.payload.company,
+                estate: item.payload.estate,
+                afdeling: item.payload.afdeling,
+                blok: item.payload.blok,
+                periode: item.payload.periode,
+                coordinates_sebelum: item.oldRecord.coordinates,
+                luas_sebelum: item.oldRecord.luas_ha,
+                kondisi_sebelum: item.oldRecord.kondisi,
+                coordinates_sesudah: item.payload.coordinates,
+                luas_sesudah: item.payload.luas_ha,
+                kondisi_sesudah: item.payload.kondisi,
+                alasan_revisi: item.payload.alasan_revisi,
+                revisi_ke: item.payload.revisi_ke,
+                diubah_oleh: item.payload.direvisi_oleh,
+                waktu_diubah: item.payload.waktu_revisi,
+              };
+
+              try {
+                localStorage.setItem(`spatial_snapshots_${item.id}`, JSON.stringify(snapshotData));
+              } catch {}
+
+              supabase.logAudit({
+                action: "UPDATE",
+                table_name: tableName,
+                record_id: item.id,
+                old_data: item.oldRecord,
+                new_data: item.payload,
+                details: `Revisi Spasial ke-${item.payload.revisi_ke} Blok ${item.payload.blok} oleh ${item.payload.direvisi_oleh}`,
+              }).catch(() => {});
+            }
           }
+
+          // Kumpulkan laporan penolakan/sukses
+          if (blockedCutoff.length > 0) {
+            dbErrors.push(`${blockedCutoff.length} blok ditolak karena melewati Cut-off tgl 25.`);
+          }
+          if (blockedNonAdmin.length > 0) {
+            dbErrors.push(`${blockedNonAdmin.length} blok ditolak revisi (Hanya Admin GIS yang berhak).`);
+          }
+          if (blockedExceededQuota.length > 0) {
+            dbErrors.push(`${blockedExceededQuota.length} blok ditolak karena kuota revisi telah habis.`);
+          }
+
+          syncedTables.push(`${tableName} (${insertedCount} baru, ${updatedCount} revisi)`);
 
           supabase
             .logAudit({
@@ -748,6 +906,78 @@ export default function DataOperasionalPage({
           onChangeTab={handleTabChange}
           records={records}
         />
+      </section>
+
+      {/* Selector Multi-Company (PT BUM & PT BSL) & Indikator Tata Kelola */}
+      <section aria-label="Entitas Perusahaan dan Tata Kelola" className="w-full min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 shadow-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+              Entitas Perusahaan:
+            </span>
+            <div className="flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCompany("all");
+                  setSelectedEstate("all");
+                  setSelectedAfdeling("all");
+                  setSelectedBlock("all");
+                }}
+                className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                  selectedCompany === "all"
+                    ? "bg-white text-slate-900 shadow-xs dark:bg-slate-700 dark:text-white font-extrabold"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
+              >
+                Semua Entitas
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCompany("PT BUM");
+                  setSelectedEstate("all");
+                  setSelectedAfdeling("all");
+                  setSelectedBlock("all");
+                }}
+                className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                  selectedCompany === "PT BUM"
+                    ? "bg-emerald-600 text-white shadow-xs font-extrabold"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
+              >
+                PT BUM (Region 1 & 2)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCompany("PT BSL");
+                  setSelectedEstate("all");
+                  setSelectedAfdeling("all");
+                  setSelectedBlock("all");
+                }}
+                className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                  selectedCompany === "PT BSL"
+                    ? "bg-sky-600 text-white shadow-xs font-extrabold"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
+              >
+                PT BSL (Region 3)
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60 font-medium">
+              <span className="size-2 rounded-full bg-emerald-500" />
+              <span>Cut-Off Bulanan: <strong>Tgl 25 Pk 23:59</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 font-medium">
+              <span className="size-2 rounded-full bg-amber-500" />
+              <span>Maks 1x Revisi Spasial ({isAdminGis ? "Admin GIS" : "Restricted"})</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* 3. Toolbar & Filter Lengkap Bertingkat (Sesuai Gambar 2) */}

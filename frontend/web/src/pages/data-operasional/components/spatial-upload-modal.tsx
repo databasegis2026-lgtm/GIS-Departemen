@@ -1,6 +1,12 @@
 import { useRef, useState } from "react";
 import * as turf from "@turf/turf";
 import type { AktivitasType, OperasionalRecord } from "../types";
+import {
+  getCompanyForEstate,
+  getOperationalCycle,
+  getRegionForEstate,
+  type CompanyType,
+} from "../tata-kelola-operasional";
 
 interface SpatialUploadModalProps {
   isOpen: boolean;
@@ -75,14 +81,6 @@ function extractPolygonCoords(geometry: any): [number, number][] | undefined {
   return undefined;
 }
 
-// Helper untuk menentukan Region berdasarkan Estate
-function getRegionForEstate(est: string): string {
-  if (est === "BSL") return "REGION 3";
-  if (["BUM 5", "BUM 6", "BUM 7"].includes(est)) return "REGION 2";
-  if (["BUM 3", "BUM 8"].includes(est)) return "REGION 3";
-  return "REGION 1";
-}
-
 export default function SpatialUploadModal({
   isOpen,
   onClose,
@@ -95,6 +93,7 @@ export default function SpatialUploadModal({
   const [selectedAktivitas, setSelectedAktivitas] = useState<OperasionalRecord["aktivitas"]>(
     currentAktivitas === "all" ? "pruning" : (currentAktivitas as OperasionalRecord["aktivitas"])
   );
+  const [selectedCompany, setSelectedCompany] = useState<CompanyType>("PT BUM");
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -221,8 +220,12 @@ export default function SpatialUploadModal({
             detectedEstate = est;
           }
 
+          const comp = selectedCompany || getCompanyForEstate(est);
+          const cycle = getOperationalCycle(act, new Date());
+
           return {
             id: `shp-upload-${Date.now()}-${idx}`,
+            company: comp,
             region: reg,
             estate: est,
             afdeling: String(afd),
@@ -235,12 +238,15 @@ export default function SpatialUploadModal({
             kondisi: kondisi,
             kontraktor: p.KONTRAKTOR || "Mandor Lapangan",
             update_peta: today,
-            periode: "Rotasi 1 2026",
+            periode: cycle.cycleLabel,
             tanggal: today,
             keterangan: keterangan,
             aktivitas: act,
             polygonCoords: coords,
             rawGeometry: f.geometry,
+            kuota_revisi: 2,
+            revisi_ke: 0,
+            is_locked: false,
           };
         });
       } else if (nameLower.endsWith(".geojson") || nameLower.endsWith(".json")) {
@@ -313,8 +319,12 @@ export default function SpatialUploadModal({
             detectedEstate = est;
           }
 
+          const comp = selectedCompany || getCompanyForEstate(est);
+          const cycle = getOperationalCycle(act, new Date());
+
           return {
             id: `shp-upload-${Date.now()}-${idx}`,
+            company: comp,
             region: reg,
             estate: est,
             afdeling: String(afd),
@@ -327,12 +337,15 @@ export default function SpatialUploadModal({
             kondisi: kondisi,
             kontraktor: p.KONTRAKTOR || "Mandor Lapangan",
             update_peta: today,
-            periode: "Rotasi 1 2026",
+            periode: cycle.cycleLabel,
             tanggal: today,
             keterangan: keterangan,
             aktivitas: act,
             polygonCoords: coords,
             rawGeometry: f.geometry,
+            kuota_revisi: 2,
+            revisi_ke: 0,
+            is_locked: false,
           };
         });
       } else {
@@ -455,6 +468,56 @@ export default function SpatialUploadModal({
 
             <div className="text-[10px] text-slate-400 mt-3">
               Format didukung: <code>.zip</code> (arsip SHP + DBF), <code>.geojson</code>
+            </div>
+          </div>
+
+          {/* Pemilihan Perusahaan (Multi-Company PT BUM vs PT BSL) */}
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-800/40 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Entitas Perusahaan:</span>
+              <span className="rounded bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[11px]">
+                {selectedCompany}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-200/80 p-0.5 rounded-lg dark:bg-slate-700/60">
+              <button
+                type="button"
+                onClick={() => setSelectedCompany("PT BUM")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition ${
+                  selectedCompany === "PT BUM"
+                    ? "bg-white text-emerald-700 shadow-xs dark:bg-slate-900 dark:text-emerald-400"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300"
+                }`}
+              >
+                PT BUM (Reg 1 & 2)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCompany("PT BSL")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition ${
+                  selectedCompany === "PT BSL"
+                    ? "bg-white text-emerald-700 shadow-xs dark:bg-slate-900 dark:text-emerald-400"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300"
+                }`}
+              >
+                PT BSL (Reg 3)
+              </button>
+            </div>
+          </div>
+
+          {/* Banner Peringatan Tata Kelola Waktu & Cut-off Tanggal 25 */}
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-900/60 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 space-y-1.5">
+            <div className="font-bold flex items-center gap-1.5 text-xs">
+              <svg className="size-4 shrink-0 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 14 14" />
+              </svg>
+              <span>Tata Kelola Waktu, Cut-off Tanggal 25 & Batasan Revisi</span>
+            </div>
+            <div className="text-[10.5px] leading-relaxed text-amber-800 dark:text-amber-300/90 space-y-0.5">
+              <p>• <strong>Batas Cut-off</strong>: Setiap <strong>tanggal 25 pukul 23:59:59</strong> seluruh data bulan berjalan terkunci otomatis.</p>
+              <p>• <strong>Buka Buku Baru</strong>: Unggahan mulai <strong>tanggal 26 ke atas</strong> otomatis dicatat sebagai Data Baru periode bulan berikutnya.</p>
+              <p>• <strong>Aturan Revisi</strong>: Revisi data blok berjalan hanya diizinkan <strong>Maksimal 1 Kali</strong> dan hanya berhak diproses oleh <strong>Admin GIS</strong>.</p>
             </div>
           </div>
 

@@ -64,6 +64,23 @@ export default function AfdelingBlockMapModal({
   // Mode: "view" (Tinjauan Biasa) atau "edit" (Editor Spasial Kanvas Penuh)
   const [mode, setMode] = useState<"view" | "edit">("view");
 
+  // State Riwayat Revisi Spasial (Before vs After)
+  const [snapshot, setSnapshot] = useState<{
+    record_id?: string;
+    blok?: string;
+    aktivitas?: string;
+    revisi_ke?: number;
+    waktu?: string;
+    luas_ha_sebelum?: number;
+    luas_sebelum?: number;
+    kondisi_sebelum?: string;
+    coordinates_sebelum?: [number, number][];
+    rawGeometry_sebelum?: any;
+    alasan_revisi?: string;
+    diubah_oleh?: string;
+  } | null>(null);
+  const [showBeforeAfter, setShowBeforeAfter] = useState<boolean>(false);
+
   // State blok terpilih dalam afdeling
   const [selectedBlockId, setSelectedBlockId] = useState<string>(record.blok);
   // State detail blok (HANYA tampil saat poligon diklik)
@@ -159,6 +176,26 @@ export default function AfdelingBlockMapModal({
       totalHa: totalLuasAfd,
     });
   };
+
+  // Muat data snapshot riwayat spasial (Before vs After) dari localStorage jika ada
+  useEffect(() => {
+    if (record?.id) {
+      try {
+        const saved = localStorage.getItem(`spatial_snapshots_${record.id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setSnapshot(parsed);
+          setShowBeforeAfter(true); // Otomatis aktif jika ada riwayat revisi
+        } else {
+          setSnapshot(null);
+          setShowBeforeAfter(false);
+        }
+      } catch {
+        setSnapshot(null);
+        setShowBeforeAfter(false);
+      }
+    }
+  }, [record?.id, record?.revisi_ke]);
 
   // Inisialisasi blok terpilih jika record berubah
   useEffect(() => {
@@ -587,6 +624,63 @@ export default function AfdelingBlockMapModal({
         }
       });
 
+      // TAMPILKAN OVERLAY SEBELUM REVISI (BEFORE VS AFTER) JIKA AKTIF
+      if (showBeforeAfter && snapshot) {
+        let prevLayer: L.Layer | null = null;
+        if (snapshot.rawGeometry_sebelum) {
+          prevLayer = L.geoJSON(snapshot.rawGeometry_sebelum, {
+            style: {
+              color: "#f59e0b",
+              weight: 3.5,
+              dashArray: "6, 6",
+              fillColor: "#f59e0b",
+              fillOpacity: 0.28,
+            },
+          }).addTo(polygonGroup);
+        } else if (snapshot.coordinates_sebelum && snapshot.coordinates_sebelum.length >= 3) {
+          prevLayer = L.polygon(snapshot.coordinates_sebelum, {
+            color: "#f59e0b",
+            weight: 3.5,
+            dashArray: "6, 6",
+            fillColor: "#f59e0b",
+            fillOpacity: 0.28,
+          }).addTo(polygonGroup);
+        }
+
+        if (prevLayer) {
+          const prevBounds = (prevLayer as any).getBounds();
+          if (prevBounds && prevBounds.isValid()) {
+            const prevCenter = prevBounds.getCenter();
+            const prevLabel = L.divIcon({
+              className: "custom-polygon-label-before",
+              html: `
+                <div style="
+                  background: rgba(180, 83, 9, 0.95);
+                  color: #ffffff;
+                  font-size: 9px;
+                  font-weight: 700;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  border: 1px dashed #fcd34d;
+                  box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+                  white-space: nowrap;
+                  text-align: center;
+                  pointer-events: none;
+                ">
+                  <div>Sebelum Rev #${snapshot.revisi_ke || 1}</div>
+                  <div style="font-size: 8px; opacity: 0.9;">
+                    ${(snapshot.luas_ha_sebelum || snapshot.luas_sebelum || 0).toFixed(1)} Ha
+                  </div>
+                </div>
+              `,
+              iconSize: [64, 24],
+              iconAnchor: [32, 12],
+            });
+            L.marker(prevCenter, { icon: prevLabel, interactive: false }).addTo(labelsGroup);
+          }
+        }
+      }
+
       // Auto fit bounds jika ada poligon
       if (polygonGroup.getLayers().length > 0) {
         map.fitBounds(polygonGroup.getBounds(), { padding: [25, 25] });
@@ -852,7 +946,7 @@ export default function AfdelingBlockMapModal({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [basemap, selectedBlockId, mode, editPolygons, selectedEditPolyId, activeTool, snappingEnabled, measurePoints]);
+  }, [basemap, selectedBlockId, mode, editPolygons, selectedEditPolyId, activeTool, snappingEnabled, measurePoints, showBeforeAfter, snapshot]);
 
   return (
     <div
@@ -926,6 +1020,28 @@ export default function AfdelingBlockMapModal({
                   Vektor
                 </button>
               </div>
+
+              {/* Tombol Perbandingan Riwayat Revisi (Before vs After) */}
+              {(snapshot || (record.revisi_ke && record.revisi_ke > 0)) && (
+                <button
+                  type="button"
+                  onClick={() => setShowBeforeAfter(!showBeforeAfter)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                    showBeforeAfter
+                      ? "border-amber-500 bg-amber-500/20 text-amber-600 dark:text-amber-300 ring-2 ring-amber-500/30"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  }`}
+                  title="Bandingkan Poligon Sebelum vs Sesudah Revisi"
+                >
+                  <span className="text-amber-500 font-extrabold">⚡</span>
+                  <span>{showBeforeAfter ? "Tutup Riwayat" : "Before vs After"}</span>
+                  {record.revisi_ke ? (
+                    <span className="rounded-full bg-amber-500/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 text-[10px] font-extrabold">
+                      Rev #{record.revisi_ke}
+                    </span>
+                  ) : null}
+                </button>
+              )}
 
               {/* Tombol Buka GIS Studio Layar Penuh Satu Estate */}
               <button
@@ -1003,6 +1119,51 @@ export default function AfdelingBlockMapModal({
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 rounded-xl bg-slate-900/95 border border-emerald-500/50 px-4 py-2 text-xs font-semibold text-emerald-300 shadow-2xl backdrop-blur-md animate-fadeIn flex items-center gap-2">
               <span>✅</span>
               <span>{notice}</span>
+            </div>
+          )}
+
+          {/* Card Riwayat Revisi Mengambang (Before vs After) */}
+          {showBeforeAfter && snapshot && mode === "view" && (
+            <div className="absolute bottom-5 left-5 z-20 w-80 rounded-2xl border border-amber-500/60 bg-slate-900/95 p-3.5 shadow-2xl backdrop-blur-md text-xs text-slate-200 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2">
+                <div className="flex items-center gap-1.5 font-bold text-amber-400">
+                  <span>🔄</span>
+                  <span>Perbandingan Riwayat Revisi</span>
+                </div>
+                <span className="text-[10px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-500/30">
+                  Revisi #{snapshot.revisi_ke || 1}
+                </span>
+              </div>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-full bg-amber-400 border border-amber-200" />
+                    <span className="text-slate-400">Sebelum Update:</span>
+                  </span>
+                  <span className="font-semibold text-amber-300">
+                    {(snapshot.luas_ha_sebelum || snapshot.luas_sebelum || 0).toFixed(1)} Ha ({snapshot.kondisi_sebelum || "-"})
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-full bg-emerald-500" />
+                    <span className="text-slate-400">Sesudah Update:</span>
+                  </span>
+                  <span className="font-semibold text-emerald-400">
+                    {(record.luas_ha || 0).toFixed(1)} Ha ({record.kondisi || "-"})
+                  </span>
+                </div>
+                {snapshot.waktu && (
+                  <div className="text-[10px] text-slate-400 mt-1">
+                    Waktu Update: {new Date(snapshot.waktu).toLocaleString("id-ID")}
+                  </div>
+                )}
+                {snapshot.alasan_revisi && (
+                  <div className="mt-1 pt-1 border-t border-slate-800 text-[10px] text-slate-300 italic">
+                    Alasan: "{snapshot.alasan_revisi}"
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

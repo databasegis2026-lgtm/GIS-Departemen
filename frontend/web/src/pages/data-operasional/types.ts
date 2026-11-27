@@ -9,6 +9,7 @@ export type AktivitasType =
 
 export interface OperasionalRecord {
   id: string;
+  company?: string;
   region: string;
   estate: string;
   afdeling: string;
@@ -27,6 +28,33 @@ export interface OperasionalRecord {
   aktivitas: "pruning" | "semprot" | "pemupukan" | "pasar_pikul" | "jangkos" | "produksi";
   polygonCoords?: [number, number][];
   rawGeometry?: any;
+  kuota_revisi?: number;
+  revisi_ke?: number;
+  is_locked?: boolean;
+  alasan_revisi?: string;
+  direvisi_oleh?: string;
+  waktu_revisi?: string;
+}
+
+export interface RiwayatSpasialItem {
+  id: string;
+  record_id: string;
+  aktivitas: string;
+  company: string;
+  estate: string;
+  afdeling: string;
+  blok: string;
+  periode: string;
+  coordinates_sebelum?: any;
+  luas_sebelum: number;
+  kondisi_sebelum: string;
+  coordinates_sesudah?: any;
+  luas_sesudah: number;
+  kondisi_sesudah: string;
+  alasan_revisi: string;
+  revisi_ke: number;
+  diubah_oleh: string;
+  waktu_diubah: string;
 }
 
 export interface OperasionalStats {
