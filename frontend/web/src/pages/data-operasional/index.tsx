@@ -28,6 +28,7 @@ import BackupDataModal from "./components/backup-data-modal";
 import AfdelingBlockMapModal from "./components/afdeling-block-map-modal";
 import { printLaporanOperasional, printPetaKartografi } from "./print-operasional";
 import { supabase } from "@/lib/supabase";
+import * as turf from "@turf/turf";
 
 const OPERASIONAL_TABLE_MAP: Record<OperasionalRecord["aktivitas"], string> = {
   produksi: "produksi",
@@ -74,22 +75,31 @@ function toDbPayload(r: OperasionalRecord) {
     periode: r.periode,
     tanggal: r.tanggal,
     keterangan: r.keterangan,
-    coordinates: r.polygonCoords
+    coordinates: r.rawGeometry || (r.polygonCoords
       ? {
           type: "Polygon",
           coordinates: [r.polygonCoords.map(([lat, lng]) => [lng, lat])],
         }
-      : null,
+      : null),
   };
 }
 
-export default function DataOperasionalPage() {
+export default function DataOperasionalPage({
+  forcedAktivitas,
+}: {
+  forcedAktivitas?: AktivitasType;
+} = {}) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Ambil tab aktif langsung dari URL secara sinkron agar tidak ada race condition saat refresh
-  const currentTabFromUrl = useMemo(() => getTabFromPath(location.pathname), [location.pathname]);
-  const [activeTab, setActiveTab] = useState<AktivitasType>(() => getTabFromPath(location.pathname));
+  // Ambil tab aktif langsung dari URL atau prop forcedAktivitas secara sinkron
+  const currentTabFromUrl = useMemo(
+    () => forcedAktivitas || getTabFromPath(location.pathname),
+    [forcedAktivitas, location.pathname]
+  );
+  const [activeTab, setActiveTab] = useState<AktivitasType>(
+    () => forcedAktivitas || getTabFromPath(location.pathname)
+  );
 
   const [records, setRecords] = useState<OperasionalRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -139,21 +149,49 @@ export default function DataOperasionalPage() {
       if (!error && Array.isArray(data)) {
         const loaded: OperasionalRecord[] = data.map((row: any) => {
           let coords: [number, number][] | undefined = undefined;
-          if (row.coordinates?.coordinates?.[0]) {
-            coords = row.coordinates.coordinates[0].map(
-              ([lng, lat]: [number, number]) => [lat, lng]
-            );
+          if (row.coordinates) {
+            const geom = row.coordinates;
+            let rawRing: [number, number][] | undefined = undefined;
+            if (geom.type === "Polygon" && geom.coordinates?.[0]) {
+              rawRing = geom.coordinates[0];
+            } else if (geom.type === "MultiPolygon" && geom.coordinates?.[0]?.[0]) {
+              rawRing = geom.coordinates[0][0];
+            } else if (Array.isArray(geom.coordinates?.[0])) {
+              rawRing = geom.coordinates[0];
+            }
+            if (rawRing && rawRing.length >= 3) {
+              coords = rawRing.map(([lng, lat]: [number, number]) => [lat, lng]);
+            }
           }
+
+          let calcLuas = Number(row.luas_ha ?? row.Luas ?? row.luas ?? 0);
+          let calcReal = Number(row.realisasi_luas_ha ?? calcLuas);
+
+          // Jika luas di tabel bernilai 0, hitung otomatis dari poligon via Turf.js
+          if (calcLuas <= 0 && row.coordinates) {
+            try {
+              const geom = row.coordinates.type ? row.coordinates : { type: "Polygon", coordinates: row.coordinates };
+              const m2 = turf.area(geom);
+              if (m2 > 0) {
+                calcLuas = Number((m2 / 10000).toFixed(2));
+                if (calcReal <= 0) calcReal = calcLuas;
+              }
+            } catch {
+              calcLuas = 25.0;
+              if (calcReal <= 0) calcReal = 25.0;
+            }
+          }
+
           return {
             id: row.id,
             region: row.region || "REGION 1",
             estate: row.estate || "BUM 1",
             afdeling: row.afdeling || "AFD 1",
-            blok: row.blok || "BLK",
+            blok: row.blok || row.Blok || "BLK",
             warung: row.warung || `Warung ${row.afdeling || "AFD 1"}`,
-            luas_ha: Number(row.luas_ha ?? 0),
-            realisasi_luas_ha: Number(row.realisasi_luas_ha ?? 0),
-            capaian_persen: Number(row.capaian_persen ?? 0),
+            luas_ha: calcLuas,
+            realisasi_luas_ha: calcReal,
+            capaian_persen: Number(row.capaian_persen ?? (calcLuas > 0 ? Math.round((calcReal / calcLuas) * 100) : 100)),
             sph: Number(row.sph ?? 136),
             kondisi: row.kondisi || "BAPP",
             kontraktor: row.kontraktor || "Mandor Lapangan",
@@ -163,6 +201,7 @@ export default function DataOperasionalPage() {
             keterangan: row.keterangan || "",
             aktivitas: act,
             polygonCoords: coords,
+            rawGeometry: row.coordinates,
           };
         });
 

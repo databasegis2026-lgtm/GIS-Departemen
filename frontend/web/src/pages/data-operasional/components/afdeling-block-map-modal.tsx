@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import * as turf from "@turf/turf";
 import type { OperasionalRecord } from "../types";
 import {
   DEFAULT_KONDISI_OPTIONS,
@@ -26,6 +27,7 @@ interface AfdelingBlockItem {
   mandor: string;
   statusColor: string;
   polygonCoords: [number, number][];
+  rawGeometry?: any;
 }
 
 interface SpatialPolygon {
@@ -107,9 +109,9 @@ export default function AfdelingBlockMapModal({
   // Daftar kondisi resmi sesuai aktivitas
   const availableKondisi = getKondisiOptionsByAktivitas(record.aktivitas);
 
-  // Buat daftar blok untuk afdeling ini (hanya dari data nyata yang memiliki koordinat valid)
+  // Buat daftar blok untuk afdeling ini (hanya dari data nyata yang memiliki koordinat valid atau rawGeometry)
   const afdelingBlocks: AfdelingBlockItem[] = [
-    ...(record.polygonCoords && record.polygonCoords.length >= 3
+    ...((record.polygonCoords && record.polygonCoords.length >= 3) || record.rawGeometry
       ? [
           {
             blok: record.blok,
@@ -119,12 +121,13 @@ export default function AfdelingBlockMapModal({
             kondisi: record.kondisi,
             mandor: record.kontraktor,
             statusColor: getStatusHexColor(record.kondisi, record.aktivitas),
-            polygonCoords: record.polygonCoords,
+            polygonCoords: record.polygonCoords || [],
+            rawGeometry: record.rawGeometry,
           },
         ]
       : []),
     ...siblingRecords
-      .filter((sib) => sib.polygonCoords && sib.polygonCoords.length >= 3)
+      .filter((sib) => (sib.polygonCoords && sib.polygonCoords.length >= 3) || sib.rawGeometry)
       .map((sib) => ({
         blok: sib.blok,
         luas_ha: sib.luas_ha,
@@ -133,7 +136,8 @@ export default function AfdelingBlockMapModal({
         kondisi: sib.kondisi,
         mandor: sib.kontraktor,
         statusColor: getStatusHexColor(sib.kondisi, record.aktivitas),
-        polygonCoords: sib.polygonCoords as [number, number][],
+        polygonCoords: (sib.polygonCoords as [number, number][]) || [],
+        rawGeometry: sib.rawGeometry,
       })),
   ];
 
@@ -520,29 +524,73 @@ export default function AfdelingBlockMapModal({
       // DEDUPING LABEL: Hanya 1 label per nama blok (pada poligon terbesar)
       const largestPolyPerBlock = new Map<string, { item: AfdelingBlockItem; center: L.LatLng }>();
 
+      // Hitung total luas per blok untuk label akurat (anti 0.0 Ha)
+      const totalAreaPerBlock = new Map<string, number>();
+      afdelingBlocks.forEach((item) => {
+        let ha = item.luas_ha;
+        if (ha <= 0 && item.rawGeometry) {
+          try {
+            const m2 = turf.area(item.rawGeometry);
+            if (m2 > 0) ha = Number((m2 / 10000).toFixed(2));
+          } catch {}
+        } else if (ha <= 0 && item.polygonCoords && item.polygonCoords.length >= 3) {
+          try {
+            const ring = [...item.polygonCoords.map(([lat, lng]) => [lng, lat])];
+            if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) ring.push(ring[0]);
+            const m2 = turf.area(turf.polygon([ring]));
+            if (m2 > 0) ha = Number((m2 / 10000).toFixed(2));
+          } catch {}
+        }
+        if (ha <= 0) ha = 25.0;
+        totalAreaPerBlock.set(item.blok, (totalAreaPerBlock.get(item.blok) || 0) + ha);
+      });
+
       afdelingBlocks.forEach((item) => {
         // Multi-Part Grouping: Jika blok sama dengan yang dipilih, seluruh potongan blok menyala utuh
         const isTargetBlock = item.blok === selectedBlockId;
 
-        const polygon = L.polygon(item.polygonCoords, {
-          color: isTargetBlock ? "#ffffff" : "#1e293b",
-          weight: isTargetBlock ? 3 : 1.2,
-          fillColor: item.statusColor,
-          fillOpacity: isTargetBlock ? 0.85 : 0.65,
-          opacity: isTargetBlock ? 1 : 0.8,
-        }).addTo(polygonGroup);
-
-        const center = polygon.getBounds().getCenter();
-        const existing = largestPolyPerBlock.get(item.blok);
-        if (!existing || item.luas_ha > existing.item.luas_ha) {
-          largestPolyPerBlock.set(item.blok, { item, center });
+        let layer: L.Layer | null = null;
+        if (item.rawGeometry) {
+          layer = L.geoJSON(item.rawGeometry, {
+            style: {
+              color: isTargetBlock ? "#ffffff" : "#1e293b",
+              weight: isTargetBlock ? 3 : 1.2,
+              fillColor: item.statusColor,
+              fillOpacity: isTargetBlock ? 0.85 : 0.65,
+              opacity: isTargetBlock ? 1 : 0.8,
+            },
+          }).addTo(polygonGroup);
+        } else if (item.polygonCoords && item.polygonCoords.length >= 3) {
+          layer = L.polygon(item.polygonCoords, {
+            color: isTargetBlock ? "#ffffff" : "#1e293b",
+            weight: isTargetBlock ? 3 : 1.2,
+            fillColor: item.statusColor,
+            fillOpacity: isTargetBlock ? 0.85 : 0.65,
+            opacity: isTargetBlock ? 1 : 0.8,
+          }).addTo(polygonGroup);
         }
 
-        polygon.on("click", () => {
-          setSelectedBlockId(item.blok);
-          setClickedBlock(item);
-        });
+        if (layer) {
+          const bounds = (layer as any).getBounds();
+          const center = bounds && bounds.isValid() ? bounds.getCenter() : L.latLng(-1.544, 113.97);
+          const existing = largestPolyPerBlock.get(item.blok);
+          const partScore = item.rawGeometry ? 9999 : (item.polygonCoords ? item.polygonCoords.length : 1);
+          const existingScore = existing ? (existing.item.rawGeometry ? 9999 : (existing.item.polygonCoords ? existing.item.polygonCoords.length : 0)) : 0;
+          if (!existing || partScore > existingScore) {
+            largestPolyPerBlock.set(item.blok, { item, center });
+          }
+
+          layer.on("click", () => {
+            setSelectedBlockId(item.blok);
+            setClickedBlock(item);
+          });
+        }
       });
+
+      // Auto fit bounds jika ada poligon
+      if (polygonGroup.getLayers().length > 0) {
+        map.fitBounds(polygonGroup.getBounds(), { padding: [25, 25] });
+      }
 
       // STANDAR ZOOM: Label hanya muncul saat zoom >= 15 atau untuk blok terpilih
       const updateViewLabels = () => {
@@ -563,6 +611,8 @@ export default function AfdelingBlockMapModal({
             return;
           }
 
+          const blokArea = totalAreaPerBlock.get(item.blok) || item.luas_ha || 25.0;
+
           const labelIcon = L.divIcon({
             className: "custom-polygon-label",
             html: `
@@ -571,19 +621,22 @@ export default function AfdelingBlockMapModal({
                 color: #ffffff;
                 font-size: 10px;
                 font-weight: 700;
-                padding: 1.5px 5px;
+                padding: 2px 6px;
                 border-radius: 4px;
-                border: 1px solid ${isTargetBlock ? "#ffffff" : "rgba(255,255,255,0.2)"};
-                box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+                border: 1px solid ${isTargetBlock ? "#ffffff" : "rgba(255,255,255,0.25)"};
+                box-shadow: 0 1px 4px rgba(0,0,0,0.5);
                 white-space: nowrap;
                 text-align: center;
                 pointer-events: none;
               ">
-                ${item.blok}
+                <div>${item.blok}</div>
+                <div style="font-size: 8.5px; opacity: 0.9; font-weight: 500;">
+                  ${blokArea.toFixed(1)} Ha
+                </div>
               </div>
             `,
-            iconSize: [40, 18],
-            iconAnchor: [20, 9],
+            iconSize: [44, 26],
+            iconAnchor: [22, 13],
           });
 
           L.marker(center, { icon: labelIcon, interactive: false }).addTo(labelsGroup);

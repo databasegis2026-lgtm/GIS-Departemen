@@ -1,11 +1,5 @@
-import EmptyPage from "@/components/shared/empty-page";
+import DataOperasionalPage from "@/pages/data-operasional";
 
 export default function PasarPikulPage() {
-  return (
-    <EmptyPage
-      title="Pasar Pikul"
-      category="Data Operasional / Perawatan / Pasar Pikul"
-      description="Halaman Pasar Pikul masih kosong. Silakan tambahkan komponen atau integrasikan data operasional GIS Departemen di sini."
-    />
-  );
+  return <DataOperasionalPage forcedAktivitas="pasar_pikul" />;
 }

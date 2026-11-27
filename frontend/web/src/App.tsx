@@ -3,6 +3,12 @@ import { workspacePages } from "@/components/layout/app-layout/sidebar/data";
 import DashboardPage from "@/pages/dashboard";
 import GrafikAnalitikPage from "@/pages/grafik-analitik";
 import DataOperasionalPage from "@/pages/data-operasional";
+import ProduksiPage from "@/pages/data-operasional/produksi";
+import PruningPage from "@/pages/data-operasional/perawatan/pruning";
+import SemprotPage from "@/pages/data-operasional/perawatan/semprot";
+import PemupukanPage from "@/pages/data-operasional/perawatan/pemupukan";
+import PasarPikulPage from "@/pages/data-operasional/perawatan/pasar-pikul";
+import JangkosPage from "@/pages/data-operasional/perawatan/jangkos";
 import { Error404Page } from "@/pages/main/pages";
 import WorkspacePage from "@/pages/main/workspace-page";
 import ManajemenPenggunaPage from "@/pages/manajemen-pengguna";
@@ -58,9 +64,13 @@ export default function App() {
         <Route path="grafik-analitik/produksi" element={<GrafikAnalitikPage />} />
         <Route path="grafik-analitik/perawatan/*" element={<GrafikAnalitikPage />} />
         <Route path="data-operasional" element={<DataOperasionalPage />} />
-        <Route path="data-operasional/produksi" element={<DataOperasionalPage />} />
-        <Route path="data-operasional/perawatan" element={<DataOperasionalPage />} />
-        <Route path="data-operasional/perawatan/*" element={<DataOperasionalPage />} />
+        <Route path="data-operasional/produksi" element={<ProduksiPage />} />
+        <Route path="data-operasional/perawatan" element={<PruningPage />} />
+        <Route path="data-operasional/perawatan/pruning" element={<PruningPage />} />
+        <Route path="data-operasional/perawatan/semprot" element={<SemprotPage />} />
+        <Route path="data-operasional/perawatan/pemupukan" element={<PemupukanPage />} />
+        <Route path="data-operasional/perawatan/pasar-pikul" element={<PasarPikulPage />} />
+        <Route path="data-operasional/perawatan/jangkos" element={<JangkosPage />} />
         <Route path="ticketing-update-peta" element={<RequestUpdatePetaPage />} />
         <Route path="request-update-peta" element={<RequestUpdatePetaPage />} />
         <Route path="edit-peta-spasial" element={<EditPetaSpasialPage />} />

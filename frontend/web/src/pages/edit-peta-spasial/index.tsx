@@ -143,29 +143,67 @@ export default function EditPetaSpasialPage() {
         if (!error && Array.isArray(data) && data.length > 0) {
           const loaded: EstatePolygonItem[] = [];
           data.forEach((row: any) => {
-            let coords: [number, number][] | undefined = undefined;
-            if (row.coordinates?.coordinates?.[0]) {
-              coords = row.coordinates.coordinates[0].map(
-                ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
-              );
+            const geom = row.coordinates;
+            if (!geom) return;
+
+            const rawPolygons: [number, number][][][] = [];
+            if (geom.type === "Polygon" && Array.isArray(geom.coordinates)) {
+              rawPolygons.push(geom.coordinates);
+            } else if (geom.type === "MultiPolygon" && Array.isArray(geom.coordinates)) {
+              geom.coordinates.forEach((poly: any) => {
+                if (Array.isArray(poly)) rawPolygons.push(poly);
+              });
+            } else if (Array.isArray(geom.coordinates)) {
+              // Format raw array tanpa type eksplisit
+              rawPolygons.push(geom.coordinates);
             }
 
-            if (coords && coords.length >= 3) {
-              const isTarget = row.blok === blok || row.id === `poly-${blok}`;
+            rawPolygons.forEach((polyCoords, partIdx) => {
+              const outerRing = polyCoords[0];
+              if (!outerRing || outerRing.length < 3) return;
+
+              const coords: [number, number][] = outerRing.map(
+                ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+              );
+
+              // 1. Ekstraksi luas: utamakan atribut database, fallback kalkulasi geodesi Turf.js
+              let partAreaHa = Number(
+                row.luas_ha ?? row.Luas ?? row.luas ?? row.realisasi_luas_ha ?? 0
+              );
+              if (partAreaHa <= 0 && outerRing.length >= 3) {
+                try {
+                  const turfPoly = turf.polygon([outerRing]);
+                  const m2 = turf.area(turfPoly);
+                  if (m2 > 0) {
+                    partAreaHa = Number((m2 / 10000).toFixed(2));
+                  }
+                } catch {
+                  // fallback jika koordinat self-intersecting
+                  partAreaHa = 25.0;
+                }
+              }
+
+              const blokName = String(row.blok ?? row.Blok ?? row.kode_blok ?? "BLK");
+              const isTarget = blokName === blok || row.id === `poly-${blok}`;
+              const partId =
+                rawPolygons.length > 1
+                  ? `${row.id || "poly-" + blokName}-part-${partIdx}`
+                  : (row.id || `poly-${blokName}`);
+
               loaded.push({
-                id: row.id || `poly-${row.blok}`,
-                name: `Blok ${row.blok} (${row.estate || estate})`,
-                blok: row.blok || "BLK",
-                luas_ha: Number(row.luas_ha ?? 0),
-                kondisi: row.kondisi || "BAPP",
-                color: getStatusHexColor(row.kondisi || "BAPP", aktivitas),
+                id: partId,
+                name: `Blok ${blokName} (${row.estate || row.Estate || estate})`,
+                blok: blokName,
+                luas_ha: partAreaHa,
+                kondisi: row.kondisi || row.Kondisi || "BAPP",
+                color: getStatusHexColor(row.kondisi || row.Kondisi || "BAPP", aktivitas),
                 coords,
                 isTargetBlok: isTarget,
-                afdeling: row.afdeling,
-                estate: row.estate,
-                keterangan: row.keterangan,
+                afdeling: row.afdeling || row.Afdeling || afdeling,
+                estate: row.estate || row.Estate || estate,
+                keterangan: row.keterangan || row.Keterangan,
               });
-            }
+            });
           });
 
           if (isMounted && loaded.length > 0) {
@@ -861,6 +899,12 @@ export default function EditPetaSpasialPage() {
 
     // ─── DEDUPING LABEL: SATU BLOK HANYA 1 LABEL (DI POLIGON TERBESAR) ───────
     const largestPolyPerBlock = new Map<string, { poly: EstatePolygonItem; bounds: L.LatLngBounds; center: L.LatLng }>();
+    const totalAreaPerBlock = new Map<string, number>();
+
+    polygons.forEach((p) => {
+      const bKey = p.blok || "BLK";
+      totalAreaPerBlock.set(bKey, (totalAreaPerBlock.get(bKey) || 0) + (p.luas_ha || 0));
+    });
 
     // ─── 1. RENDER SELURUH POLIGON SATU ESTATE ─────────────────────────────
     polygons.forEach((poly) => {
@@ -907,7 +951,11 @@ export default function EditPetaSpasialPage() {
       const center = bounds.getCenter();
       const blokKey = poly.blok || "BLK";
       const existing = largestPolyPerBlock.get(blokKey);
-      if (!existing || poly.luas_ha > existing.poly.luas_ha) {
+      const isBigger =
+        !existing ||
+        poly.luas_ha > existing.poly.luas_ha ||
+        (poly.luas_ha === existing.poly.luas_ha && poly.coords.length > existing.poly.coords.length);
+      if (isBigger) {
         largestPolyPerBlock.set(blokKey, { poly, bounds, center });
       }
 
@@ -990,6 +1038,7 @@ export default function EditPetaSpasialPage() {
           return;
         }
 
+        const totalHa = totalAreaPerBlock.get(poly.blok) || poly.luas_ha;
         const labelIcon = L.divIcon({
           className: "custom-polygon-label",
           html: `
@@ -1007,7 +1056,7 @@ export default function EditPetaSpasialPage() {
               text-align: center;
             ">
               <div>${poly.blok}</div>
-              <div style="font-size: 8px; font-weight: normal; opacity: 0.85;">${poly.luas_ha.toFixed(1)} Ha</div>
+              <div style="font-size: 8px; font-weight: normal; opacity: 0.85;">${totalHa > 0 ? totalHa.toFixed(1) : "—"} Ha</div>
             </div>
           `,
           iconSize: [60, 24],

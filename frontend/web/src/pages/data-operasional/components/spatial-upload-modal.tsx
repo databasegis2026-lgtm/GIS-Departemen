@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import * as turf from "@turf/turf";
 import type { AktivitasType, OperasionalRecord } from "../types";
 
 interface SpatialUploadModalProps {
@@ -103,6 +104,11 @@ export default function SpatialUploadModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      const name = file.name.toLowerCase();
+      if (name.endsWith(".lock") || name.endsWith(".sr.lock")) {
+        setErrorMsg("Berkas temporary lock ArcGIS (*.lock) tidak didukung. Harap pilih arsip Shapefile (.zip) atau GeoJSON.");
+        return;
+      }
       setSelectedFile(file);
       setErrorMsg("");
       // Otomatis deteksi aktivitas saat file dipilih
@@ -164,9 +170,21 @@ export default function SpatialUploadModal({
 
           // Cek variasi field Luas: LuasHA, luas, Luas_Ha, LUAS_HA, Luas, HA, dsb.
           const rawLuas = p.LuasHA ?? p.Luas_Ha ?? p.LUAS_HA ?? p.luas ?? p.Luas ?? p.LUAS ?? p.HA;
-          const luasHa = (rawLuas !== undefined && rawLuas !== null && !isNaN(Number(rawLuas)))
+          let luasHa = (rawLuas !== undefined && rawLuas !== null && !isNaN(Number(rawLuas)))
             ? Number(rawLuas)
             : 0;
+
+          // Hitung otomatis luas spasial via Turf.js jika atribut luas kosong / 0
+          if (luasHa <= 0 && f.geometry) {
+            try {
+              const m2 = turf.area(f.geometry);
+              if (m2 > 0) {
+                luasHa = Number((m2 / 10000).toFixed(2));
+              }
+            } catch {
+              luasHa = 0;
+            }
+          }
 
           // Cek variasi field Realisasi: Realiluas, RL_Luas_Ha, RL_Luas, realluas, Realuas_Ha, Realisasi, dsb.
           const rawReal = p.Realiluas ?? p.RL_Luas_Ha ?? p.RL_Luas ?? p.realluas ?? p.Realuas_Ha ?? p.Realisasi ?? p.REALISASI ?? p.REAL_HA ?? p.REAL;
@@ -222,6 +240,7 @@ export default function SpatialUploadModal({
             keterangan: keterangan,
             aktivitas: act,
             polygonCoords: coords,
+            rawGeometry: f.geometry,
           };
         });
       } else if (nameLower.endsWith(".geojson") || nameLower.endsWith(".json")) {
@@ -247,9 +266,21 @@ export default function SpatialUploadModal({
           const blokName = hasBlok ? String(rawBlok).trim() : `BLOK-${idx + 1} (Belum Ada Nama)`;
 
           const rawLuas = p.LUAS_HA ?? p.Luas ?? p.luas ?? p.Luas_Ha ?? p.HA;
-          const luasHa = (rawLuas !== undefined && rawLuas !== null && !isNaN(Number(rawLuas)))
+          let luasHa = (rawLuas !== undefined && rawLuas !== null && !isNaN(Number(rawLuas)))
             ? Number(rawLuas)
             : 0;
+
+          // Hitung otomatis luas spasial via Turf.js jika atribut luas kosong / 0
+          if (luasHa <= 0 && f.geometry) {
+            try {
+              const m2 = turf.area(f.geometry);
+              if (m2 > 0) {
+                luasHa = Number((m2 / 10000).toFixed(2));
+              }
+            } catch {
+              luasHa = 0;
+            }
+          }
 
           const rawReal = p.REALISASI ?? p.realisasi ?? p.RL_Luas ?? p.realluas;
           const realisasiHa = (rawReal !== undefined && rawReal !== null && !isNaN(Number(rawReal)))
@@ -301,6 +332,7 @@ export default function SpatialUploadModal({
             keterangan: keterangan,
             aktivitas: act,
             polygonCoords: coords,
+            rawGeometry: f.geometry,
           };
         });
       } else {

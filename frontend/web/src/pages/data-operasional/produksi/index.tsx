@@ -1,11 +1,5 @@
-import EmptyPage from "@/components/shared/empty-page";
+import DataOperasionalPage from "@/pages/data-operasional";
 
 export default function ProduksiPage() {
-  return (
-    <EmptyPage
-      title="Produksi"
-      category="Data Operasional / Produksi"
-      description="Halaman Produksi masih kosong. Silakan tambahkan komponen atau integrasikan data operasional GIS Departemen di sini."
-    />
-  );
+  return <DataOperasionalPage forcedAktivitas="produksi" />;
 }
