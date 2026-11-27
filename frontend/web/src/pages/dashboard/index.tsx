@@ -9,7 +9,6 @@ import DashboardMetrics from "./components/dashboard-metrics";
 import DynamicAchievementBarChart from "./components/dynamic-achievement-bar-chart";
 import EstateAndBlockRankingCard from "./components/estate-and-block-ranking-card";
 import ExecutiveSummaryBanner from "./components/executive-summary-banner";
-import MonthlyTargetGauge from "./components/monthly-target-gauge";
 import OperationalTrendChart from "./components/operational-trend-chart";
 import StatusDistributionCard from "./components/status-distribution-card";
 import WeatherAlertNotification from "./components/weather-alert-notification";
@@ -211,16 +210,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Middle Analytics Grid: Tren Line Chart & Target Gauge */}
+        {/* Middle Analytics Grid: Tren Line Chart 12 Bulan Target Rencana vs Realisasi Aktual */}
         <div className="grid grid-cols-12 gap-4 md:gap-6">
-          {/* Line Chart 12 Bulan Target Rencana vs Realisasi Aktual */}
-          <div className="col-span-12 xl:col-span-7">
+          <div className="col-span-12">
             <OperationalTrendChart filters={filters} />
-          </div>
-
-          {/* Target Gauge Dinamis (Semi Circle 2) */}
-          <div className="col-span-12 xl:col-span-5">
-            <MonthlyTargetGauge filters={filters} />
           </div>
         </div>
 

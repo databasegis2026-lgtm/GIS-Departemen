@@ -16,6 +16,7 @@ import {
   type EstatePolygonItem,
 } from "../data-operasional/mock-operasional";
 import { printPetaKartografi } from "../data-operasional/print-operasional";
+import { supabase } from "@/lib/supabase";
 import * as turf from "@turf/turf";
 
 /**
@@ -91,6 +92,7 @@ export default function EditPetaSpasialPage() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layersGroupRef = useRef<L.FeatureGroup | null>(null);
+  const labelsGroupRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const rubberbandRef = useRef<L.Polyline | null>(null);
 
@@ -101,8 +103,6 @@ export default function EditPetaSpasialPage() {
   const snappingEnabled = true;
   const snapTolerancePx = 15;
   const snapBatasBlok = true;
-  const snapBatasAfdeling = true;
-  const snapBatasEstate = true;
   const snapTPH = true;
 
   // Panel Docking Edit GIS Studio (Kiri) - Default Close
@@ -117,12 +117,87 @@ export default function EditPetaSpasialPage() {
   // State Notifikasi HUD
   const [notice, setNotice] = useState<string>("");
 
-  // ─── DATASET SPASIAL SATU ESTATE PENUH ───────────────────────────────────
-  const initialEstatePolygons = useRef<EstatePolygonItem[]>(
-    getEstatePolygons(estate, blok, aktivitas)
-  );
+  // ─── DATASET SPASIAL SATU ESTATE PENUH (MUAT DARI DATABASE SUPABASE) ───────
+  const [polygons, setPolygons] = useState<EstatePolygonItem[]>([]);
 
-  const [polygons, setPolygons] = useState<EstatePolygonItem[]>(initialEstatePolygons.current);
+  // Perbarui & muat poligon riil dari Supabase berdasarkan aktivitas & estate
+  useEffect(() => {
+    let isMounted = true;
+    async function loadEstatePolygons() {
+      // Tabel Supabase yang sesuai aktivitas
+      const tableMap: Record<string, string> = {
+        produksi: "produksi",
+        pruning: "perawatan_pruning",
+        semprot: "perawatan_semprot",
+        pemupukan: "perawatan_pemupukan",
+        pasar_pikul: "perawatan_pasar_pikul",
+        jangkos: "perawatan_jangkos",
+      };
+      const targetTable = tableMap[aktivitas.toLowerCase()] || "perawatan_pruning";
+
+      try {
+        const { data, error } = await supabase
+          .from(targetTable)
+          .select("*", {}, { limit: 5000 });
+
+        if (!error && Array.isArray(data) && data.length > 0) {
+          const loaded: EstatePolygonItem[] = [];
+          data.forEach((row: any) => {
+            let coords: [number, number][] | undefined = undefined;
+            if (row.coordinates?.coordinates?.[0]) {
+              coords = row.coordinates.coordinates[0].map(
+                ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+              );
+            }
+
+            if (coords && coords.length >= 3) {
+              const isTarget = row.blok === blok || row.id === `poly-${blok}`;
+              loaded.push({
+                id: row.id || `poly-${row.blok}`,
+                name: `Blok ${row.blok} (${row.estate || estate})`,
+                blok: row.blok || "BLK",
+                luas_ha: Number(row.luas_ha ?? 0),
+                kondisi: row.kondisi || "BAPP",
+                color: getStatusHexColor(row.kondisi || "BAPP", aktivitas),
+                coords,
+                isTargetBlok: isTarget,
+                afdeling: row.afdeling,
+                estate: row.estate,
+                keterangan: row.keterangan,
+              });
+            }
+          });
+
+          if (isMounted && loaded.length > 0) {
+            setPolygons(loaded);
+            const target = loaded.find((p) => p.isTargetBlok || p.blok === blok);
+            if (target) {
+              setSelectedPolyIds([target.id]);
+            } else {
+              setSelectedPolyIds([loaded[0].id]);
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Gagal memuat poligon dari DB Supabase:", err);
+      }
+
+      // Fallback jika database belum ada data untuk estate ini
+      if (isMounted) {
+        const fallback = getEstatePolygons(estate, blok, aktivitas);
+        setPolygons(fallback);
+        if (fallback.length > 0) {
+          setSelectedPolyIds([fallback[0].id]);
+        }
+      }
+    }
+
+    loadEstatePolygons();
+    return () => {
+      isMounted = false;
+    };
+  }, [estate, blok, aktivitas]);
 
   // ─── SELEKSI POLIGON ─────────────────────────────────────────────────────
   const [selectedPolyIds, setSelectedPolyIds] = useState<string[]>([`poly-${blok}`]);
@@ -213,14 +288,12 @@ export default function EditPetaSpasialPage() {
   const handleReset = useCallback(() => {
     if (!window.confirm(`Kembalikan seluruh poligon estate ${estate} ke kondisi master awal?`)) return;
     saveToHistory();
-    setPolygons(initialEstatePolygons.current);
-    setSelectedPolyIds([`poly-${blok}`]);
     setCutPoints([]);
     setMeasurePoints([]);
     setTotalDistanceMeters(0);
     setMeasureAreaHa(0);
-    showNotice("Poligon estate dikembalikan ke kondisi awal.");
-  }, [estate, blok, saveToHistory, showNotice]);
+    showNotice("Poligon estate disegarkan.");
+  }, [estate, saveToHistory, showNotice]);
 
   const handleCancelInteractiveModes = useCallback(() => {
     setCutPoints([]);
@@ -727,6 +800,9 @@ export default function EditPetaSpasialPage() {
     const layersGroup = L.featureGroup().addTo(map);
     layersGroupRef.current = layersGroup;
 
+    const labelsGroup = L.layerGroup().addTo(map);
+    labelsGroupRef.current = labelsGroup;
+
     // Rubberband line for dragging
     const rubberband = L.polyline([], {
       color: "#ef4444",
@@ -740,6 +816,7 @@ export default function EditPetaSpasialPage() {
       map.remove();
       mapInstanceRef.current = null;
       layersGroupRef.current = null;
+      labelsGroupRef.current = null;
       tileLayerRef.current = null;
       rubberbandRef.current = null;
     };
@@ -779,43 +856,43 @@ export default function EditPetaSpasialPage() {
 
     // 1. Bersihkan seluruh layer poligon sebelumnya agar TIDAK MENUMPUK
     layersGroup.clearLayers();
+    const labelsGroup = labelsGroupRef.current;
+    if (labelsGroup) labelsGroup.clearLayers();
 
-    // Hitung perimeter
-    const allLats = polygons.flatMap((p) => p.coords.map((c) => c[0]));
-    const allLngs = polygons.flatMap((p) => p.coords.map((c) => c[1]));
-    const minLat = Math.min(...allLats);
-    const maxLat = Math.max(...allLats);
-    const minLng = Math.min(...allLngs);
-    const maxLng = Math.max(...allLngs);
-    const midLat = (minLat + maxLat) / 2;
+    // ─── DEDUPING LABEL: SATU BLOK HANYA 1 LABEL (DI POLIGON TERBESAR) ───────
+    const largestPolyPerBlock = new Map<string, { poly: EstatePolygonItem; bounds: L.LatLngBounds; center: L.LatLng }>();
 
     // ─── 1. RENDER SELURUH POLIGON SATU ESTATE ─────────────────────────────
     polygons.forEach((poly) => {
-      const isSelected = selectedPolyIds.includes(poly.id);
-      const isTarget = poly.id === `poly-${blok}` || poly.isTargetBlok;
+      // Grouping Blok: Jika blok terpilih, semua pecahan blok ini ikut terpilih secara harmonis
+      const isSelected = selectedPolyIds.includes(poly.id) || selectedPolyIds.some((id) => {
+        const found = polygons.find((p) => p.id === id);
+        return found && found.blok === poly.blok;
+      });
+      const isTarget = poly.id === `poly-${blok}` || poly.isTargetBlok || poly.blok === blok;
       const isMergeSelected = mergeSelectedIds.includes(poly.id);
 
       // Desain border TailAdmin: Bersih, tegas, tanpa efek neon slop
-      let strokeColor = "#374151"; // Tailwind gray-700
-      let strokeWidth = 1.5;
+      let strokeColor = "#334155"; // Tailwind slate-700
+      let strokeWidth = 1.2;
       let strokeOpacity = 0.85;
-      let fillOpacity = 0.55;
+      let fillOpacity = 0.65;
 
       if (isSelected) {
-        strokeColor = "#2563eb"; // TailAdmin brand-600
+        strokeColor = "#ffffff";
         strokeWidth = 3;
         strokeOpacity = 1;
-        fillOpacity = 0.72;
+        fillOpacity = 0.85;
       } else if (isMergeSelected) {
         strokeColor = "#7c3aed"; // Violet-600
         strokeWidth = 3;
         strokeOpacity = 1;
-        fillOpacity = 0.7;
+        fillOpacity = 0.75;
       } else if (isTarget) {
-        strokeColor = "#0284c7"; // Sky-600
+        strokeColor = "#38bdf8"; // Sky-400
         strokeWidth = 2.5;
         strokeOpacity = 0.95;
-        fillOpacity = 0.65;
+        fillOpacity = 0.75;
       }
 
       const leafPolygon = L.polygon(poly.coords, {
@@ -826,33 +903,13 @@ export default function EditPetaSpasialPage() {
         fillOpacity: fillOpacity,
       }).addTo(layersGroup);
 
-      // Label Nama Blok di Tengah Poligon (TailAdmin Clean Badge)
-      const center = leafPolygon.getBounds().getCenter();
-      const labelIcon = L.divIcon({
-        className: "custom-polygon-label",
-        html: `
-          <div style="
-            background: ${isSelected ? "#2563eb" : isMergeSelected ? "#7c3aed" : "rgba(17, 24, 39, 0.88)"};
-            color: #ffffff;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid ${isSelected || isMergeSelected ? "#ffffff" : "rgba(255,255,255,0.2)"};
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            white-space: nowrap;
-            pointer-events: none;
-            text-align: center;
-          ">
-            <div>${poly.blok}</div>
-            <div style="font-size: 8px; font-weight: normal; opacity: 0.85;">${poly.luas_ha.toFixed(1)} Ha</div>
-          </div>
-        `,
-        iconSize: [60, 24],
-        iconAnchor: [30, 12],
-      });
-
-      L.marker(center, { icon: labelIcon, interactive: false }).addTo(layersGroup);
+      const bounds = leafPolygon.getBounds();
+      const center = bounds.getCenter();
+      const blokKey = poly.blok || "BLK";
+      const existing = largestPolyPerBlock.get(blokKey);
+      if (!existing || poly.luas_ha > existing.poly.luas_ha) {
+        largestPolyPerBlock.set(blokKey, { poly, bounds, center });
+      }
 
       // Event Klik Poligon
       leafPolygon.on("click", (e) => {
@@ -906,33 +963,63 @@ export default function EditPetaSpasialPage() {
       });
     });
 
-    // ─── 2. RENDER BATAS AFDELING (GARIS HITAM PUTUS-PUTUS) ───────────────────
-    const afdelingDividerLine: [number, number][] = [
-      [midLat, minLng],
-      [midLat, maxLng],
-    ];
-    L.polyline(afdelingDividerLine, {
-      color: "#111827",
-      weight: 2.5,
-      dashArray: "6, 6",
-      opacity: 0.95,
-      interactive: false,
-    }).addTo(layersGroup);
+    // ─── STANDAR ZOOM LEVEL: RENDER LABEL HANYA KETIKA ZOOM >= 15 (DEKAT) ──────
+    const updateLabelsVisibility = () => {
+      const labelsGroup = labelsGroupRef.current;
+      const currentMap = mapInstanceRef.current;
+      if (!labelsGroup || !currentMap) return;
+      const currentZoom = currentMap.getZoom();
+      const currentMapBounds = currentMap.getBounds();
+      labelsGroup.clearLayers();
 
-    // ─── 3. RENDER BATAS ESTATE (GARIS HITAM TEBAL) ───────────────────────────
-    const estatePerimeter: [number, number][] = [
-      [maxLat, minLng],
-      [maxLat, maxLng],
-      [minLat, maxLng],
-      [minLat, minLng],
-      [maxLat, minLng],
-    ];
-    L.polyline(estatePerimeter, {
-      color: "#111827",
-      weight: 4.5,
-      opacity: 1,
-      interactive: false,
-    }).addTo(layersGroup);
+      // Aturan Standar Zoom:
+      // Zoom < 15: Sembunyikan label, hanya render blok yang sedang aktif/dipilih
+      // Zoom >= 15: Render 1 label per blok yang berada di dalam viewport aktif
+      largestPolyPerBlock.forEach(({ poly, center }) => {
+        const isSelected = selectedPolyIds.includes(poly.id);
+        const isTarget = poly.id === `poly-${blok}` || poly.isTargetBlok;
+        const isMergeSelected = mergeSelectedIds.includes(poly.id);
+
+        // Jika zoom jauh (< 15), HANYA blok terpilih yang diberi label
+        if (currentZoom < 15 && !isSelected && !isTarget && !isMergeSelected) {
+          return;
+        }
+
+        // Culling: Abaikan label di luar layar pandang peta
+        if (!currentMapBounds.contains(center)) {
+          return;
+        }
+
+        const labelIcon = L.divIcon({
+          className: "custom-polygon-label",
+          html: `
+            <div style="
+              background: ${isSelected ? "#2563eb" : isMergeSelected ? "#7c3aed" : "rgba(17, 24, 39, 0.88)"};
+              color: #ffffff;
+              font-size: 10px;
+              font-weight: 700;
+              padding: 2px 6px;
+              border-radius: 4px;
+              border: 1px solid ${isSelected || isMergeSelected ? "#ffffff" : "rgba(255,255,255,0.2)"};
+              box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+              white-space: nowrap;
+              pointer-events: none;
+              text-align: center;
+            ">
+              <div>${poly.blok}</div>
+              <div style="font-size: 8px; font-weight: normal; opacity: 0.85;">${poly.luas_ha.toFixed(1)} Ha</div>
+            </div>
+          `,
+          iconSize: [60, 24],
+          iconAnchor: [30, 12],
+        });
+
+        L.marker(center, { icon: labelIcon, interactive: false }).addTo(labelsGroup);
+      });
+    };
+
+    updateLabelsVisibility();
+    map.on("zoomend moveend", updateLabelsVisibility);
 
     // ─── HELPER SNAPPING (MAGNET PRESISI KOORDINAT) ─────────────────────────
     const getSnappedCoords = (
@@ -953,30 +1040,6 @@ export default function EditPetaSpasialPage() {
             bestDist = dist;
             bestCoord = tph.coords;
             bestTarget = `Titik TPH (${tph.name})`;
-          }
-        }
-      }
-
-      if (snapBatasEstate) {
-        for (const coord of estatePerimeter) {
-          const pt = map.latLngToLayerPoint(L.latLng(coord[0], coord[1]));
-          const dist = clickPt.distanceTo(pt);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestCoord = coord;
-            bestTarget = "Batas Estate";
-          }
-        }
-      }
-
-      if (snapBatasAfdeling) {
-        for (const coord of afdelingDividerLine) {
-          const pt = map.latLngToLayerPoint(L.latLng(coord[0], coord[1]));
-          const dist = clickPt.distanceTo(pt);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestCoord = coord;
-            bestTarget = "Batas Afdeling";
           }
         }
       }
@@ -1189,10 +1252,29 @@ export default function EditPetaSpasialPage() {
       }
     }
 
+    // Auto-fit bounds ke target block atau seluruh poligon estate
+    const targetPoly = polygons.find((p) => p.isTargetBlok || p.id === `poly-${blok}`);
+    if (targetPoly && targetPoly.coords && targetPoly.coords.length >= 3) {
+      try {
+        const polyBounds = L.polygon(targetPoly.coords).getBounds();
+        if (polyBounds.isValid()) {
+          map.fitBounds(polyBounds, { padding: [80, 80], maxZoom: 16 });
+        }
+      } catch {}
+    } else if (layersGroup.getLayers().length > 0) {
+      try {
+        const bounds = layersGroup.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
+      } catch {}
+    }
+
     return () => {
       map.off("mousemove", handleMouseMove);
       map.off("click", handleMapClick);
       map.off("dblclick", handleMapDblClick);
+      map.off("zoomend moveend", updateLabelsVisibility);
     };
   }, [
     polygons,
@@ -1203,8 +1285,6 @@ export default function EditPetaSpasialPage() {
     measurePoints,
     snappingEnabled,
     snapBatasBlok,
-    snapBatasAfdeling,
-    snapBatasEstate,
     snapTPH,
     executeInstantCut,
     showNotice,

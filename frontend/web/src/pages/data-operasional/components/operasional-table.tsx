@@ -160,7 +160,15 @@ export default function OperasionalTable({
                     <span
                       className={`size-1.5 rounded-full ${isSynced ? "bg-emerald-500" : "bg-amber-500"}`}
                     />
-                    <span>{r.update_peta}</span>
+                    <span>
+                      {(() => {
+                        const val = r.update_peta;
+                        if (!val || val === "Baru Saja" || val === "Sinkron DB") {
+                          return r.tanggal || new Date().toISOString().slice(0, 10);
+                        }
+                        return val;
+                      })()}
+                    </span>
                   </span>
                 </td>
 

@@ -1,14 +1,14 @@
-import { AlertIcon, RegenerateIcon, SunIcon, XIcon } from "@/icons";
+import { RegenerateIcon, XIcon } from "@/icons";
 import { useState } from "react";
 import { MODULE_CONFIGS } from "../module-config";
-import type { DashboardFilterState, MonthOption, OperationalModuleOption, QuarterOption, RegionOption, WeatherCondition } from "../types";
+import type { DashboardFilterState, MonthOption, OperationalModuleOption, QuarterOption, RegionOption } from "../types";
 import DashboardExportDropdown from "./dashboard-export-dropdown";
 import DashboardMapCanvas from "./dashboard-map-canvas";
 import DashboardMetrics from "./dashboard-metrics";
 import DynamicAchievementBarChart from "./dynamic-achievement-bar-chart";
 import EstateAndBlockRankingCard from "./estate-and-block-ranking-card";
-import MonthlyTargetGauge from "./monthly-target-gauge";
 import OperationalTrendChart from "./operational-trend-chart";
+import PlantationWeatherWidget from "./plantation-weather-widget";
 import WeatherAlertNotification from "./weather-alert-notification";
 
 interface DashboardFullscreenViewProps {
@@ -143,43 +143,12 @@ export default function DashboardFullscreenView({
             {todayFormatted}
           </span>
 
-          {/* Weather live status pill */}
-          <div className="relative flex items-center">
-            <div
-              className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold transition-all ${filters.weatherAlert === "hujan_lebat"
-                ? "border-amber-400 bg-amber-100 text-amber-800 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
-                : filters.weatherAlert === "badai"
-                  ? "border-rose-400 bg-rose-100 text-rose-800 dark:border-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
-                  : filters.weatherAlert === "banjir"
-                    ? "border-blue-400 bg-blue-100 text-blue-800 dark:border-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
-                    : "border-amber-200/60 bg-amber-50/60 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-400"
-                }`}
-            >
-              {filters.weatherAlert && filters.weatherAlert !== "cerah" ? (
-                <AlertIcon className="size-3.5 text-rose-500 animate-pulse" />
-              ) : (
-                <SunIcon className="size-3.5 text-amber-500" />
-              )}
-              <select
-                value={filters.weatherAlert || "cerah"}
-                onChange={(e) => onFilterChange({ weatherAlert: e.target.value as WeatherCondition })}
-                className="cursor-pointer bg-transparent text-xs font-semibold outline-none"
-              >
-                <option value="cerah" className="text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                  29°C Cerah
-                </option>
-                <option value="hujan_lebat" className="text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                  Hujan Lebat
-                </option>
-                <option value="badai" className="text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                  Badai Angin
-                </option>
-                <option value="banjir" className="text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                  Genangan Air
-                </option>
-              </select>
-            </div>
-          </div>
+          {/* Telemetri Cuaca Real Kebun (Satelit Open-Meteo & BMKG) */}
+          <PlantationWeatherWidget
+            filters={filters}
+            onFilterChange={onFilterChange}
+            compact={true}
+          />
 
           {/* Tombol Segarkan */}
           <button
@@ -210,16 +179,11 @@ export default function DashboardFullscreenView({
 
       {/* 2. Workspace 1 Layar Penuh Bebas Scroll (Zero-Scroll Strict Viewport Budget) */}
       <main className="relative z-0 mt-2.5 flex flex-1 min-h-0 gap-2.5 overflow-hidden">
-        {/* KOLOM KIRI (28%): 4 KPI Metrics + Bar Chart Dinamis (Region/Afdeling) + Distribusi Status & Legenda */}
+        {/* KOLOM KIRI (28%): 4 KPI Metrics + Bar Chart Dinamis (Region/Afdeling) */}
         <section className="flex w-[28%] shrink-0 flex-col gap-2.5 h-full overflow-hidden">
           {/* 4 KPI Cards (Compact 2x2 grid) */}
           <div className="shrink-0 overflow-hidden">
             <DashboardMetrics filters={filters} compact={true} />
-          </div>
-
-          {/* Card Capaian Target Tahun 2026 / Bulan / Kuartal (Pie Chart 5) */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <MonthlyTargetGauge filters={filters} compact={true} />
           </div>
 
           {/* Card Bar Chart Dinamis: Region 1-3 & BSL (switches to Afdeling when Estate selected) */}

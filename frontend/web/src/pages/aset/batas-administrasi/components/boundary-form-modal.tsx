@@ -26,7 +26,7 @@ export default function BoundaryFormModal({
     } else {
       const empty: Record<string, any> = {};
       columns.forEach((col) => {
-        empty[col] = "";
+        empty[col] = col.toLowerCase().includes("luas") && levelName === "Afdeling" ? 0 : "";
       });
       setFormData(empty);
     }

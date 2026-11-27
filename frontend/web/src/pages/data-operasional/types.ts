@@ -25,6 +25,7 @@ export interface OperasionalRecord {
   tanggal: string;
   keterangan: string;
   aktivitas: "pruning" | "semprot" | "pemupukan" | "pasar_pikul" | "jangkos" | "produksi";
+  polygonCoords?: [number, number][];
 }
 
 export interface OperasionalStats {

@@ -13,7 +13,6 @@ const COLUMNS = [
   "SPV",
   "KASIE",
   "KOOR_KASIE",
-  "AFD",
 ];
 
 const INITIAL_DATA: Record<string, any>[] = [];

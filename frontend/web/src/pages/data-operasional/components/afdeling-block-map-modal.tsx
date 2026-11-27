@@ -107,110 +107,38 @@ export default function AfdelingBlockMapModal({
   // Daftar kondisi resmi sesuai aktivitas
   const availableKondisi = getKondisiOptionsByAktivitas(record.aktivitas);
 
-  // Buat daftar blok untuk afdeling ini
+  // Buat daftar blok untuk afdeling ini (hanya dari data nyata yang memiliki koordinat valid)
   const afdelingBlocks: AfdelingBlockItem[] = [
-    {
-      blok: record.blok,
-      luas_ha: record.luas_ha,
-      realisasi_luas_ha: record.realisasi_luas_ha,
-      capaian_persen: record.capaian_persen,
-      kondisi: record.kondisi,
-      mandor: record.kontraktor,
-      statusColor: getStatusHexColor(record.kondisi, record.aktivitas),
-      polygonCoords: [
-        [-1.545, 113.965],
-        [-1.545, 113.975],
-        [-1.555, 113.975],
-        [-1.555, 113.965],
-      ],
-    },
-    {
-      blok: siblingRecords[0]?.blok || `${record.blok.charAt(0)}01`,
-      luas_ha: siblingRecords[0]?.luas_ha || 29.8,
-      realisasi_luas_ha: siblingRecords[0]?.realisasi_luas_ha || 29.8,
-      capaian_persen: siblingRecords[0]?.capaian_persen || 100,
-      kondisi: siblingRecords[0]?.kondisi || availableKondisi[0],
-      mandor: siblingRecords[0]?.kontraktor || "Mandor Afdeling",
-      statusColor: getStatusHexColor(siblingRecords[0]?.kondisi || availableKondisi[0], record.aktivitas),
-      polygonCoords: [
-        [-1.533, 113.953],
-        [-1.533, 113.963],
-        [-1.543, 113.963],
-        [-1.543, 113.953],
-      ],
-    },
-    {
-      blok: `${record.blok.charAt(0)}02`,
-      luas_ha: 30.0,
-      realisasi_luas_ha: 21.0,
-      capaian_persen: 70,
-      kondisi: availableKondisi[1] || availableKondisi[0],
-      mandor: "Mandor Afdeling",
-      statusColor: getStatusHexColor(availableKondisi[1] || availableKondisi[0], record.aktivitas),
-      polygonCoords: [
-        [-1.533, 113.965],
-        [-1.533, 113.975],
-        [-1.543, 113.975],
-        [-1.543, 113.965],
-      ],
-    },
-    {
-      blok: `${record.blok.charAt(0)}03`,
-      luas_ha: 28.5,
-      realisasi_luas_ha: 28.5,
-      capaian_persen: 100,
-      kondisi: availableKondisi[0],
-      mandor: "Mandor Afdeling",
-      statusColor: getStatusHexColor(availableKondisi[0], record.aktivitas),
-      polygonCoords: [
-        [-1.533, 113.977],
-        [-1.533, 113.987],
-        [-1.543, 113.987],
-        [-1.543, 113.977],
-      ],
-    },
-    {
-      blok: `${record.blok.charAt(0)}04`,
-      luas_ha: 27.2,
-      realisasi_luas_ha: 13.6,
-      capaian_persen: 50,
-      kondisi: availableKondisi[availableKondisi.length - 1],
-      mandor: "Mandor Afdeling",
-      statusColor: getStatusHexColor(availableKondisi[availableKondisi.length - 1], record.aktivitas),
-      polygonCoords: [
-        [-1.545, 113.953],
-        [-1.545, 113.963],
-        [-1.555, 113.963],
-        [-1.555, 113.953],
-      ],
-    },
-    {
-      blok: `${record.blok.charAt(0)}06`,
-      luas_ha: 31.4,
-      realisasi_luas_ha: 31.4,
-      capaian_persen: 100,
-      kondisi: availableKondisi[0],
-      mandor: "Mandor Afdeling",
-      statusColor: getStatusHexColor(availableKondisi[0], record.aktivitas),
-      polygonCoords: [
-        [-1.545, 113.977],
-        [-1.545, 113.987],
-        [-1.555, 113.987],
-        [-1.555, 113.977],
-      ],
-    },
+    ...(record.polygonCoords && record.polygonCoords.length >= 3
+      ? [
+          {
+            blok: record.blok,
+            luas_ha: record.luas_ha,
+            realisasi_luas_ha: record.realisasi_luas_ha,
+            capaian_persen: record.capaian_persen,
+            kondisi: record.kondisi,
+            mandor: record.kontraktor,
+            statusColor: getStatusHexColor(record.kondisi, record.aktivitas),
+            polygonCoords: record.polygonCoords,
+          },
+        ]
+      : []),
+    ...siblingRecords
+      .filter((sib) => sib.polygonCoords && sib.polygonCoords.length >= 3)
+      .map((sib) => ({
+        blok: sib.blok,
+        luas_ha: sib.luas_ha,
+        realisasi_luas_ha: sib.realisasi_luas_ha,
+        capaian_persen: sib.capaian_persen,
+        kondisi: sib.kondisi,
+        mandor: sib.kontraktor,
+        statusColor: getStatusHexColor(sib.kondisi, record.aktivitas),
+        polygonCoords: sib.polygonCoords as [number, number][],
+      })),
   ];
 
-  // Titik TPH di sekitar blok terpilih
-  const tphList: TPHPoint[] = [
-    { id: "tph-1", name: "TPH-01", coords: [-1.545, 113.965] },
-    { id: "tph-2", name: "TPH-02", coords: [-1.545, 113.97] },
-    { id: "tph-3", name: "TPH-03", coords: [-1.545, 113.975] },
-    { id: "tph-4", name: "TPH-04", coords: [-1.55, 113.975] },
-    { id: "tph-5", name: "TPH-05", coords: [-1.555, 113.975] },
-    { id: "tph-6", name: "TPH-06", coords: [-1.555, 113.97] },
-    { id: "tph-7", name: "TPH-07", coords: [-1.555, 113.965] },
-  ];
+  // Titik TPH (kosong tanpa data dummy)
+  const tphList: TPHPoint[] = [];
 
   const totalLuasAfd = afdelingBlocks.reduce((acc, b) => acc + b.luas_ha, 0);
 
@@ -232,6 +160,14 @@ export default function AfdelingBlockMapModal({
   useEffect(() => {
     setSelectedBlockId(record.blok);
     const initialItem = afdelingBlocks.find((b) => b.blok === record.blok) || afdelingBlocks[0];
+    if (!initialItem) {
+      setClickedBlock(null);
+      setEditPolygons([]);
+      setInitialPolygonsMaster([]);
+      setHistory([]);
+      setSelectedEditPolyId(null);
+      return;
+    }
     setClickedBlock(initialItem);
 
     // Inisialisasi poligon edit awal
@@ -249,7 +185,7 @@ export default function AfdelingBlockMapModal({
     setInitialPolygonsMaster(initPoly);
     setHistory([]);
     setSelectedEditPolyId(initPoly[0].id);
-  }, [record.blok]);
+  }, [record.blok, record.polygonCoords]);
 
   // Handler pergantian blok dari dropdown
   const handleSelectBlock = (blokName: string) => {
@@ -577,50 +513,85 @@ export default function AfdelingBlockMapModal({
     L.tileLayer(tileUrl, { maxZoom: 18 }).addTo(map);
 
     const polygonGroup = L.featureGroup().addTo(map);
+    const labelsGroup = L.layerGroup().addTo(map);
 
     if (mode === "view") {
       // MODE VIEW: Tampilkan seluruh blok dalam afdeling
+      // DEDUPING LABEL: Hanya 1 label per nama blok (pada poligon terbesar)
+      const largestPolyPerBlock = new Map<string, { item: AfdelingBlockItem; center: L.LatLng }>();
+
       afdelingBlocks.forEach((item) => {
+        // Multi-Part Grouping: Jika blok sama dengan yang dipilih, seluruh potongan blok menyala utuh
         const isTargetBlock = item.blok === selectedBlockId;
 
         const polygon = L.polygon(item.polygonCoords, {
-          color: isTargetBlock ? "#ffffff" : "#475569",
-          weight: isTargetBlock ? 3.5 : 1.5,
+          color: isTargetBlock ? "#ffffff" : "#1e293b",
+          weight: isTargetBlock ? 3 : 1.2,
           fillColor: item.statusColor,
-          fillOpacity: isTargetBlock ? 0.8 : 0.45,
-          dashArray: isTargetBlock ? undefined : "3, 3",
+          fillOpacity: isTargetBlock ? 0.85 : 0.65,
+          opacity: isTargetBlock ? 1 : 0.8,
         }).addTo(polygonGroup);
 
         const center = polygon.getBounds().getCenter();
-        const labelIcon = L.divIcon({
-          className: "custom-polygon-label",
-          html: `
-            <div style="
-              background: rgba(15, 23, 42, 0.85);
-              color: #ffffff;
-              font-size: 10px;
-              font-weight: 700;
-              padding: 1px 5px;
-              border-radius: 4px;
-              border: 1px solid ${isTargetBlock ? "#38bdf8" : "rgba(255,255,255,0.2)"};
-              box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-              white-space: nowrap;
-              text-align: center;
-            ">
-              ${item.blok}
-            </div>
-          `,
-          iconSize: [40, 18],
-          iconAnchor: [20, 9],
-        });
-
-        L.marker(center, { icon: labelIcon, interactive: false }).addTo(polygonGroup);
+        const existing = largestPolyPerBlock.get(item.blok);
+        if (!existing || item.luas_ha > existing.item.luas_ha) {
+          largestPolyPerBlock.set(item.blok, { item, center });
+        }
 
         polygon.on("click", () => {
           setSelectedBlockId(item.blok);
           setClickedBlock(item);
         });
       });
+
+      // STANDAR ZOOM: Label hanya muncul saat zoom >= 15 atau untuk blok terpilih
+      const updateViewLabels = () => {
+        labelsGroup.clearLayers();
+        const currentZoom = map.getZoom();
+        const currentBounds = map.getBounds();
+
+        largestPolyPerBlock.forEach(({ item, center }) => {
+          const isTargetBlock = item.blok === selectedBlockId;
+
+          // Sembunyikan jika zoom < 15, KECUALI blok yang sedang dipilih
+          if (currentZoom < 15 && !isTargetBlock) {
+            return;
+          }
+
+          // Culling di luar layar pandang
+          if (!currentBounds.contains(center)) {
+            return;
+          }
+
+          const labelIcon = L.divIcon({
+            className: "custom-polygon-label",
+            html: `
+              <div style="
+                background: ${isTargetBlock ? "#0284c7" : "rgba(15, 23, 42, 0.88)"};
+                color: #ffffff;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 1.5px 5px;
+                border-radius: 4px;
+                border: 1px solid ${isTargetBlock ? "#ffffff" : "rgba(255,255,255,0.2)"};
+                box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+                white-space: nowrap;
+                text-align: center;
+                pointer-events: none;
+              ">
+                ${item.blok}
+              </div>
+            `,
+            iconSize: [40, 18],
+            iconAnchor: [20, 9],
+          });
+
+          L.marker(center, { icon: labelIcon, interactive: false }).addTo(labelsGroup);
+        });
+      };
+
+      updateViewLabels();
+      map.on("zoomend moveend", updateViewLabels);
     } else {
       // MODE EDIT: Tampilkan poligon spasial yang sedang dimodifikasi
       editPolygons.forEach((poly) => {
@@ -649,6 +620,7 @@ export default function AfdelingBlockMapModal({
               box-shadow: 0 2px 4px rgba(0,0,0,0.5);
               white-space: nowrap;
               text-align: center;
+              pointer-events: none;
             ">
               <div>${poly.name}</div>
               <div style="color: #38bdf8; font-size: 9px;">${poly.luas_ha.toFixed(1)} Ha • ${poly.kondisi}</div>
@@ -658,7 +630,7 @@ export default function AfdelingBlockMapModal({
           iconAnchor: [35, 12],
         });
 
-        L.marker(center, { icon: labelIcon, interactive: false }).addTo(polygonGroup);
+        L.marker(center, { icon: labelIcon, interactive: false }).addTo(labelsGroup);
 
         polygon.on("click", (e) => {
           L.DomEvent.stopPropagation(e);

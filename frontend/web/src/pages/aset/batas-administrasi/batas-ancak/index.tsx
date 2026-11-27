@@ -8,13 +8,6 @@ const COLUMNS = [
   "luas",
   "WARUNG",
   "HARI",
-  "Drive_Wafd",
-  "BLOK_1",
-  "AFD_1",
-  "ESTATE_1",
-  "REGION_1",
-  "WARUNG_1",
-  "HARI_1",
   "No_Ancak",
   "Koord_X",
 ];

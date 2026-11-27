@@ -201,65 +201,11 @@ export interface EstatePolygonItem {
 }
 
 export const getEstatePolygons = (
-  estateName: string,
-  targetBlok: string = "A05",
-  aktivitas: string = "pruning"
+  _estateName: string,
+  _targetBlok: string = "",
+  _aktivitas: string = "pruning"
 ): EstatePolygonItem[] => {
-  const kondisiList = getKondisiOptionsByAktivitas(aktivitas);
-  const rows = ["A", "B"];
-  const cols = [1, 2, 3, 4, 5, 6];
-
-  const baseLat = -1.545;
-  const baseLng = 113.925;
-  const blockHeight = 0.010; // ~1.1 km
-  const blockWidth = 0.010;  // ~1.1 km (30 Ha standard block)
-
-  const estatePolygons: EstatePolygonItem[] = [];
-
-  rows.forEach((r, rIdx) => {
-    cols.forEach((c, cIdx) => {
-      const blockCode = `${r}0${c}`;
-      const isTarget = blockCode.toUpperCase() === targetBlok.toUpperCase();
-
-      const topLat = baseLat - rIdx * blockHeight;
-      const bottomLat = topLat - blockHeight;
-      const leftLng = baseLng + cIdx * blockWidth;
-      const rightLng = leftLng + blockWidth;
-
-      const polygonCoords: [number, number][] = [
-        [topLat, leftLng],
-        [topLat, rightLng],
-        [bottomLat, rightLng],
-        [bottomLat, leftLng],
-      ];
-
-      // Kondisi default bervariasi sesuai aktivitas
-      let kondisi = kondisiList[0];
-      if (isTarget) {
-        kondisi = kondisiList[0];
-      } else if (c % 3 === 0) {
-        kondisi = kondisiList[1] || kondisiList[0];
-      } else if (c % 2 === 0) {
-        kondisi = kondisiList[2] || kondisiList[0];
-      }
-
-      estatePolygons.push({
-        id: `poly-${blockCode}`,
-        name: `Blok ${blockCode} (${estateName})`,
-        blok: blockCode,
-        luas_ha: isTarget ? 30.5 : 29.8 + (c * 0.2),
-        kondisi,
-        color: getStatusHexColor(kondisi, aktivitas),
-        coords: polygonCoords,
-        isTargetBlok: isTarget,
-        estate: estateName,
-        afdeling: `AFD ${((rIdx * 6 + cIdx) % 4) + 1}`,
-        tahun_tanam: 2018 + (cIdx % 5),
-      });
-    });
-  });
-
-  return estatePolygons;
+  return [];
 };
 
 export const INITIAL_OPERASIONAL_RECORDS: OperasionalRecord[] = [];

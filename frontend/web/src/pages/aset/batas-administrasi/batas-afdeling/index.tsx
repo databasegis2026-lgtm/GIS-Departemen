@@ -1,6 +1,6 @@
 import BoundaryPageLayout from "../components/boundary-page-layout";
 
-const COLUMNS = ["Region", "Estate", "JSPV_1", "JSPV_2", "SPV", "KASIE", "AFD"];
+const COLUMNS = ["Region", "Estate", "AFD", "Luas", "JSPV_1", "JSPV_2", "SPV", "KASIE"];
 
 const INITIAL_DATA: Record<string, any>[] = [];
 

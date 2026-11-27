@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb";
 import { PageMeta } from "@/components/shared/page-meta";
+import { getGisDataset, setGisDataset } from "@/lib/indexed-db";
+import { exportToCSV, exportToExcel } from "@/utils/gis-export";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +16,8 @@ export interface NurseryBatch {
   batch_id: string;
   estate: string;
   afdeling: string;
-  region: "REGION 1" | "REGION 2" | "REGION 3";
-  tahap: "Pre-Nursery (<3 Bulan)" | "Main Nursery (3-12 Bulan)";
+  region: string;
+  tahap: string;
   varietas: string;
   produsen_benih: string;
   bulan_semai: string;
@@ -25,385 +27,650 @@ export interface NurseryBatch {
   bibit_siap_salur: number;
   bibit_afkir_culling: number;
   culling_rate_pct: number;
-  sistem_irigasi: "Sumisansui Otomatis" | "Overhead Sprinkler" | "Manual Selang";
+  sistem_irigasi: string;
   luas_area_ha: number;
-  status: "Siap Salur ke Lapangan" | "Pemeliharaan Rutin" | "Tahap Aklimatisasi";
+  status: string;
 }
 
-const MOCK_NURSERIES: NurseryBatch[] = [];
+const NURSERY_COLUMNS = [
+  { key: "batch_id", label: "BATCH ID" },
+  { key: "varietas", label: "VARIETAS" },
+  { key: "produsen_benih", label: "PRODUSEN" },
+  { key: "estate", label: "ESTATE" },
+  { key: "afdeling", label: "AFDELING" },
+  { key: "tahap", label: "TAHAP" },
+  { key: "umur_bulan", label: "UMUR (BLN)" },
+  { key: "bibit_hidup", label: "BIBIT HIDUP" },
+  { key: "bibit_siap_salur", label: "SIAP SALUR" },
+  { key: "culling_rate_pct", label: "CULLING (%)" },
+  { key: "sistem_irigasi", label: "IRIGASI" },
+  { key: "status", label: "STATUS" },
+] as const;
 
 export default function PembibitanPage() {
-  const [regionFilter, setRegionFilter] = useState<string>("Semua");
-  const [estateFilter, setEstateFilter] = useState<string>("Semua");
-  const [stageFilter, setStageFilter] = useState<string>("Semua");
+  const [data, setData] = useState<NurseryBatch[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAfdeling, setSelectedAfdeling] = useState("");
+  const [pageSize, setPageSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("gis_page_size");
+      if (saved) { const p = parseInt(saved, 10); if ([10, 25, 50, 100].includes(p)) return p; }
+    } catch { }
+    return 10;
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [selectedBatch, setSelectedBatch] = useState<NurseryBatch | null>(null);
-  const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
-  const [uploadedShpFile, setUploadedShpFile] = useState<File | null>(null);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [formRecord, setFormRecord] = useState<NurseryBatch | null>(null);
+  const [deleteConfirmRecord, setDeleteConfirmRecord] = useState<NurseryBatch | null>(null);
 
-  const filteredBatches = useMemo(() => {
-    return MOCK_NURSERIES.filter((item) => {
-      if (regionFilter !== "Semua" && item.region !== regionFilter) return false;
-      if (estateFilter !== "Semua" && item.estate !== estateFilter) return false;
-      if (stageFilter !== "Semua" && !item.tahap.startsWith(stageFilter)) return false;
-      return true;
+  // Muat data dari IndexedDB
+  useEffect(() => {
+    let isCancelled = false;
+    const loadData = async () => {
+      try {
+        const cached = await getGisDataset<NurseryBatch[]>("pembibitan");
+        if (!isCancelled && cached && Array.isArray(cached) && cached.length > 0) {
+          setData(cached);
+        }
+      } catch (err) {
+        console.warn("Gagal memuat dataset pembibitan:", err);
+      }
+    };
+    loadData();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  // Daftar unik Afdeling
+  const availableAfdelings = useMemo(() => {
+    const setAfd = new Set<string>();
+    data.forEach((d) => {
+      const val = String(d.afdeling || "").trim();
+      if (val && val !== "-") setAfd.add(val);
     });
-  }, [regionFilter, estateFilter, stageFilter]);
+    return Array.from(setAfd).sort();
+  }, [data]);
 
-  const totalSiapSalur = filteredBatches.reduce((acc, curr) => acc + curr.bibit_siap_salur, 0);
-  const totalBibitHidup = filteredBatches.reduce((acc, curr) => acc + curr.bibit_hidup, 0);
-  const avgCulling = (
-    filteredBatches.reduce((acc, curr) => acc + curr.culling_rate_pct, 0) / (filteredBatches.length || 1)
-  ).toFixed(1);
+  // Filter pencarian & afdeling
+  const filteredBatches = useMemo(() => {
+    let list = data;
+    if (selectedAfdeling) {
+      list = list.filter(
+        (item) => String(item.afdeling || "").trim().toLowerCase() === selectedAfdeling.toLowerCase()
+      );
+    }
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase().trim();
+    return list.filter((item) => {
+      return (
+        String(item.batch_id || "").toLowerCase().includes(q) ||
+        String(item.varietas || "").toLowerCase().includes(q) ||
+        String(item.estate || "").toLowerCase().includes(q) ||
+        String(item.afdeling || "").toLowerCase().includes(q) ||
+        String(item.produsen_benih || "").toLowerCase().includes(q) ||
+        String(item.status || "").toLowerCase().includes(q)
+      );
+    });
+  }, [data, selectedAfdeling, searchQuery]);
+
+  // Pagination
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedAfdeling, pageSize]);
+
+  const totalItems = filteredBatches.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const validPage = Math.min(currentPage, totalPages);
+
+  const paginatedData = useMemo(() => {
+    const startIdx = (validPage - 1) * pageSize;
+    return filteredBatches.slice(startIdx, startIdx + pageSize);
+  }, [filteredBatches, validPage, pageSize]);
+
+  const startRecordNum = totalItems === 0 ? 0 : (validPage - 1) * pageSize + 1;
+  const endRecordNum = Math.min(validPage * pageSize, totalItems);
+
+  // Simpan form
+  const handleSaveForm = async (formData: Record<string, any>) => {
+    let nextData: NurseryBatch[] = [];
+    if (formRecord?.id) {
+      const updated = { ...formRecord, ...formData } as NurseryBatch;
+      nextData = data.map((item) => (item.id === formRecord.id ? updated : item));
+      setData(nextData);
+      await setGisDataset("pembibitan", nextData);
+    } else {
+      const newRec: NurseryBatch = {
+        id: "nursery-" + Date.now(),
+        batch_id: formData.batch_id || `BATCH-${data.length + 1}`,
+        estate: formData.estate || "BUM 1",
+        afdeling: formData.afdeling || "OA",
+        region: formData.region || "REGION 1",
+        tahap: formData.tahap || "Main Nursery (3-12 Bulan)",
+        varietas: formData.varietas || "DxP Dami Mas",
+        produsen_benih: formData.produsen_benih || "PT Dami Mas Sejahtera",
+        bulan_semai: formData.bulan_semai || "Januari 2026",
+        umur_bulan: Number(formData.umur_bulan) || 6,
+        jumlah_kecambah_diterima: Number(formData.jumlah_kecambah_diterima) || 10000,
+        bibit_hidup: Number(formData.bibit_hidup) || 9400,
+        bibit_siap_salur: Number(formData.bibit_siap_salur) || 8900,
+        bibit_afkir_culling: Number(formData.bibit_afkir_culling) || 600,
+        culling_rate_pct: Number(formData.culling_rate_pct) || 6.0,
+        sistem_irigasi: formData.sistem_irigasi || "Sumisansui Otomatis",
+        luas_area_ha: Number(formData.luas_area_ha) || 1.5,
+        status: formData.status || "Siap Salur ke Lapangan",
+      };
+      nextData = [newRec, ...data];
+      setData(nextData);
+      await setGisDataset("pembibitan", nextData);
+    }
+    setShowFormModal(false);
+    setFormRecord(null);
+  };
+
+  // Hapus batch
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmRecord) return;
+    const targetId = deleteConfirmRecord.id;
+    const nextData = data.filter((r) => r.id !== targetId);
+    setData(nextData);
+    await setGisDataset("pembibitan", nextData);
+    setDeleteConfirmRecord(null);
+  };
+
+  // Ekspor CSV
+  const handleExportCSV = () => {
+    const afdSuffix = selectedAfdeling ? `_AFD_${selectedAfdeling}` : "";
+    const filename = `Pembibitan_Sawit${afdSuffix}_${new Date().toISOString().slice(0, 10)}.csv`;
+    exportToCSV(filename, NURSERY_COLUMNS as any, filteredBatches);
+  };
+
+  // Ekspor Excel
+  const handleExportExcel = () => {
+    const afdSuffix = selectedAfdeling ? `_AFD_${selectedAfdeling}` : "";
+    const filename = `Pembibitan_Sawit${afdSuffix}_${new Date().toISOString().slice(0, 10)}.xls`;
+    exportToExcel(filename, selectedAfdeling ? `AFD ${selectedAfdeling}` : "Nursery", NURSERY_COLUMNS as any, filteredBatches);
+  };
 
   return (
-    <>
+    <div className="space-y-4">
       <PageMeta
-        title="Aset Pembibitan Sawit (Nursery) | PT BUM - BSL"
-        description="Monitoring spasial batch pembibitan pre-nursery dan main nursery, varietas kecambah, dan bibit siap salur"
+        title="Aset Pembibitan Sawit (Nursery) | PT BUM"
+        description="Monitoring batch pembibitan pre-nursery dan main nursery PT Bangkitgiat Usaha Mandiri"
       />
 
-      <div className="space-y-6">
-        <PageBreadcrumb pageTitle="Pembibitan Kelapa Sawit (Nursery)" />
+      <PageBreadcrumb pageTitle="Pembibitan Kelapa Sawit (Nursery)" />
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
-            <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Total Bibit Hidup
-            </span>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                {totalBibitHidup.toLocaleString("id-ID")}
-              </span>
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Tersertifikasi</span>
-            </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Pre-Nursery & Main Nursery PT BUM & BSL
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
-            <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Bibit Siap Salur (Ready)
-            </span>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                {totalSiapSalur.toLocaleString("id-ID")}
-              </span>
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Siap Tanam LC</span>
-            </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Cukup untuk replanting / new planting ~1.900 Ha
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
-            <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Rata-rata Culling (Afkir)
-            </span>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">{avgCulling}%</span>
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Bagus (&lt;10%)</span>
-            </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Sesuai standar seleksi ketat mutu agronomi
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
-            <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Varietas DxP Unggul
-            </span>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">4 Varietas</span>
-              <span className="text-xs font-medium text-purple-600 dark:text-purple-400">High Yield</span>
-            </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Dami Mas, PPKS Marihat, Topaz, Socfindo
-            </p>
-          </div>
-        </div>
-
-        {/* Filter and Action Header */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 flex-1">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
-                  Region
-                </label>
-                <select
-                  value={regionFilter}
-                  onChange={(e) => setRegionFilter(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+      {/* Toolbar Pencarian & Filter Afdeling Terpadu */}
+      <div className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1 max-w-xl">
+            {/* Input Pencarian Tunggal */}
+            <div className="relative flex-1 min-w-[200px]">
+              <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Cari batch, varietas, estate, afdeling, status..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-9 text-xs text-gray-900 placeholder-gray-400 shadow-theme-xs focus:border-emerald-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold cursor-pointer"
                 >
-                  <option value="Semua">Semua Region</option>
-                  <option value="REGION 1">REGION 1</option>
-                  <option value="REGION 2">REGION 2</option>
-                  <option value="REGION 3">REGION 3</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
-                  Estate
-                </label>
-                <select
-                  value={estateFilter}
-                  onChange={(e) => setEstateFilter(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="Semua">Semua Estate</option>
-                  <option value="BUM 1">BUM 1</option>
-                  <option value="BUM 2">BUM 2</option>
-                  <option value="BUM 4">BUM 4</option>
-                  <option value="BUM 5">BUM 5</option>
-                  <option value="BUM 6">BUM 6</option>
-                  <option value="BSL">BSL</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
-                  Tahapan Semai
-                </label>
-                <select
-                  value={stageFilter}
-                  onChange={(e) => setStageFilter(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="Semua">Semua Tahapan</option>
-                  <option value="Main Nursery">Main Nursery (3-12 Bulan)</option>
-                  <option value="Pre-Nursery">Pre-Nursery (&lt;3 Bulan)</option>
-                </select>
-              </div>
+                  ✕
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-2 self-end lg:self-center">
-              <button
-                type="button"
-                onClick={() => setShowUploadModal(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 transition"
+            {/* Filter Afdeling */}
+            <div className="min-w-[150px] sm:min-w-[175px]">
+              <select
+                value={selectedAfdeling}
+                onChange={(e) => setSelectedAfdeling(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white py-2 px-3 text-xs font-semibold text-gray-800 shadow-theme-xs focus:border-emerald-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 cursor-pointer"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                Unggah SHP Bedengan Nursery
-              </button>
+                <option value="">Semua Afdeling ({data.length.toLocaleString("id-ID")})</option>
+                {availableAfdelings.map((afd) => (
+                  <option key={afd} value={afd}>
+                    Afdeling {afd}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        </div>
 
-        {/* Nursery Batches Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900">
-          <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              Data Batch Pembibitan & Bedengan Lapangan ({filteredBatches.length} Batch Aktif)
-            </h3>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-600 uppercase dark:bg-gray-800 dark:text-gray-300">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Batch ID & Varietas</th>
-                  <th className="px-4 py-3 font-semibold">Lokasi Nursery</th>
-                  <th className="px-4 py-3 font-semibold">Tahap & Umur</th>
-                  <th className="px-4 py-3 font-semibold text-right">Bibit Hidup</th>
-                  <th className="px-4 py-3 font-semibold text-right">Siap Salur</th>
-                  <th className="px-4 py-3 font-semibold text-right">Culling Rate</th>
-                  <th className="px-4 py-3 font-semibold">Sistem Irigasi</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
-                {filteredBatches.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-8 text-center text-xs text-gray-500">
-                      Belum ada data batch pembibitan (nursery). Silakan sinkronkan atau unggah berkas SHP.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredBatches.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-gray-900 dark:text-white">{item.varietas}</div>
-                        <div className="font-mono text-[11px] text-gray-500 dark:text-gray-400">{item.batch_id}</div>
-                        <div className="text-[10px] text-gray-400">{item.produsen_benih}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900 dark:text-white">{item.estate} • {item.afdeling}</div>
-                        <div className="text-[11px] text-gray-500">{item.region} ({item.luas_area_ha} Ha)</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>{item.tahap}</div>
-                        <div className="text-[11px] text-gray-500 font-medium">Umur {item.umur_bulan} Bulan ({item.bulan_semai})</div>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        {item.bibit_hidup.toLocaleString("id-ID")}
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                        {item.bibit_siap_salur.toLocaleString("id-ID")}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="font-medium text-gray-900 dark:text-white">{item.culling_rate_pct}%</span>
-                        <div className="text-[10px] text-gray-400">{item.bibit_afkir_culling.toLocaleString("id-ID")} pkk</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                          {item.sistem_irigasi}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${item.status === "Siap Salur ke Lapangan"
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                            : item.status === "Pemeliharaan Rutin"
-                              ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
-                              : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                            }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedBatch(item)}
-                          className="rounded border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        >
-                          Detail
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          {/* Tombol Aksi */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setFormRecord(null);
+                setShowFormModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 cursor-pointer"
+            >
+              + Tambah Batch
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={filteredBatches.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 cursor-pointer"
+            >
+              Ekspor CSV
+            </button>
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              disabled={filteredBatches.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40 transition cursor-pointer"
+            >
+              Ekspor Excel
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Batch Detail Modal */}
+      {/* Tabel Data Pembibitan */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800 dark:text-white">
+              Data Batch Pembibitan Kelapa Sawit ({totalItems} Data Terpilih)
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2 mt-2 sm:mt-0 text-xs text-gray-500">
+            <span>Tampilkan baris:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50/80 dark:border-gray-800 dark:bg-gray-800/60">
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300">No</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Batch ID</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Varietas</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Lokasi</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Tahap</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 text-right whitespace-nowrap">Bibit Hidup</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 text-right whitespace-nowrap">Siap Salur</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 text-right whitespace-nowrap">Culling Rate</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Irigasi</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Status</th>
+                <th className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+              {paginatedData.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="py-12 text-center text-gray-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="text-2xl">🌱</span>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Belum ada data batch pembibitan (nursery).
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormRecord(null);
+                          setShowFormModal(true);
+                        }}
+                        className="mt-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 cursor-pointer"
+                      >
+                        + Tambah Data Batch
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedData.map((item, idx) => (
+                  <tr key={item.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/50">
+                    <td className="py-2 px-3 text-gray-400 font-mono">
+                      {startRecordNum + idx}
+                    </td>
+                    <td className="py-2 px-3 font-mono font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                      {item.batch_id}
+                    </td>
+                    <td className="py-2 px-3 whitespace-nowrap font-semibold text-gray-900 dark:text-white">
+                      <div>{item.varietas}</div>
+                      <div className="text-[10px] text-gray-400 font-normal">{item.produsen_benih}</div>
+                    </td>
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <div>{item.estate} • AFD {item.afdeling}</div>
+                      <div className="text-[10px] text-gray-400">{item.region}</div>
+                    </td>
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <div>{item.tahap}</div>
+                      <div className="text-[10px] text-gray-400 font-mono">Umur {item.umur_bulan} Bulan</div>
+                    </td>
+                    <td className="py-2 px-3 text-right font-medium whitespace-nowrap">
+                      {item.bibit_hidup.toLocaleString("id-ID")}
+                    </td>
+                    <td className="py-2 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                      {item.bibit_siap_salur.toLocaleString("id-ID")}
+                    </td>
+                    <td className="py-2 px-3 text-right whitespace-nowrap">
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">{item.culling_rate_pct}%</span>
+                      <div className="text-[10px] text-gray-400">{item.bibit_afkir_culling.toLocaleString("id-ID")} afkir</div>
+                    </td>
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <span className="inline-flex rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                        {item.sistem_irigasi}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <span className="inline-block rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBatch(item)}
+                          className="rounded p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer"
+                          title="Detail Batch"
+                        >
+                          📄
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormRecord(item);
+                            setShowFormModal(true);
+                          }}
+                          className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                          title="Edit"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirmRecord(item)}
+                          className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+                          title="Hapus"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Bar */}
+        {totalItems > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t border-gray-200 px-4 py-2.5 dark:border-gray-800 text-xs text-gray-500 gap-2">
+            <div>
+              Menampilkan {startRecordNum} - {endRecordNum} dari total {totalItems} data
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-gray-700 dark:hover:bg-gray-800 cursor-pointer"
+              >
+                Sebelumnya
+              </button>
+              <span className="px-2">
+                Halaman {currentPage} dari {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-gray-700 dark:hover:bg-gray-800 cursor-pointer"
+              >
+                Selanjutnya
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
       {selectedBatch && (
         <Dialog open={!!selectedBatch} onOpenChange={() => setSelectedBatch(null)}>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>{selectedBatch.batch_id} - {selectedBatch.varietas}</DialogTitle>
-              <DialogDescription>
-                Rincian penerimaan kecambah, tingkat hidup, dan sertifikasi benih resmi
+              <DialogTitle className="text-sm font-bold text-gray-900 dark:text-white">
+                Rincian Batch: {selectedBatch.batch_id}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-gray-500">
+                Spesifikasi varietas kecambah, umur semai, dan tingkat hidup
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2 text-xs">
-              <div className="grid grid-cols-2 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/40">
+            <div className="space-y-3 pt-2 text-xs">
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/60 font-mono text-[11px]">
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Produsen Sumber Benih:</span>
-                  <p className="font-semibold text-gray-900 dark:text-white">{selectedBatch.produsen_benih}</p>
+                  <span className="text-gray-400 block text-[10px]">Varietas:</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{selectedBatch.varietas}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Tahapan & Umur Semai:</span>
-                  <p className="font-medium text-gray-900 dark:text-white">{selectedBatch.tahap} ({selectedBatch.umur_bulan} Bulan)</p>
+                  <span className="text-gray-400 block text-[10px]">Produsen:</span>
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{selectedBatch.produsen_benih}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Total Kecambah Diterima:</span>
-                  <p className="font-medium text-gray-900 dark:text-white">{selectedBatch.jumlah_kecambah_diterima.toLocaleString("id-ID")} Butir</p>
+                  <span className="text-gray-400 block text-[10px]">Lokasi:</span>
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{selectedBatch.estate} • AFD {selectedBatch.afdeling}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Bibit Siap Tanam:</span>
-                  <p className="font-bold text-emerald-600 dark:text-emerald-400">{selectedBatch.bibit_siap_salur.toLocaleString("id-ID")} Pokok</p>
+                  <span className="text-gray-400 block text-[10px]">Luas Bedengan:</span>
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{selectedBatch.luas_area_ha} Ha</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Afkir (Culling) / Persen:</span>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedBatch.bibit_afkir_culling.toLocaleString("id-ID")} Pokok ({selectedBatch.culling_rate_pct}%)
-                  </p>
+                  <span className="text-gray-400 block text-[10px]">Bibit Hidup:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{selectedBatch.bibit_hidup.toLocaleString("id-ID")}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Luas Plot Bedengan:</span>
-                  <p className="font-medium text-gray-900 dark:text-white">{selectedBatch.luas_area_ha} Hektar</p>
+                  <span className="text-gray-400 block text-[10px]">Siap Salur:</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">{selectedBatch.bibit_siap_salur.toLocaleString("id-ID")}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Culling Afkir:</span>
+                  <span className="font-medium text-red-600 dark:text-red-400">{selectedBatch.culling_rate_pct}% ({selectedBatch.bibit_afkir_culling.toLocaleString("id-ID")})</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Irigasi:</span>
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{selectedBatch.sistem_irigasi}</span>
                 </div>
               </div>
 
-              <div>
-                <span className="font-medium text-gray-700 dark:text-gray-300">Spesifikasi Sistem Irigasi:</span>
-                <p className="mt-1 text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {selectedBatch.sistem_irigasi}: Dilengkapi pompa submersible diesel, pipa transmisi PVC 3 inch, dan selang mikro perforasi dengan debit stabil 25 mm/hari guna menjaga kadar air optimal polibag.
-                </p>
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedBatch(null)}
+                  className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 cursor-pointer"
+                >
+                  Tutup
+                </button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
       )}
 
-      {/* Upload SHP Modal */}
-      {showUploadModal && (
-        <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+      {/* Modal Tambah / Edit Batch */}
+      {showFormModal && (
+        <Dialog open={showFormModal} onOpenChange={setShowFormModal}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Unggah SHP Layout Bedengan Pembibitan</DialogTitle>
-              <DialogDescription>
-                Unggah poligon batas plot nursery (.zip) koordinat UTM Zona 49S
+              <DialogTitle className="text-sm font-bold text-gray-900 dark:text-white">
+                {formRecord ? `Edit Batch Pembibitan` : `Tambah Batch Pembibitan Baru`}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-gray-500">
+                Isi data batch benih, lokasi bedengan nursery, dan populasi bibit
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
-              <div className="flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 dark:border-gray-700">
-                <div className="text-center">
-                  <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                    <label className="cursor-pointer font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                      Pilih berkas ZIP / SHP Bedengan
-                      <input
-                        type="file"
-                        className="sr-only"
-                        accept=".zip,.shp,.dbf,.shx,.prj,.geojson,.kml,.kmz"
-                        onChange={(e) => setUploadedShpFile(e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  </div>
-                  {uploadedShpFile && (
-                    <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      {uploadedShpFile.name} (
-                      {uploadedShpFile.size < 1024 * 1024
-                        ? `${(uploadedShpFile.size / 1024).toFixed(1)} KB`
-                        : uploadedShpFile.size < 1024 * 1024 * 1024
-                          ? `${(uploadedShpFile.size / (1024 * 1024)).toFixed(2)} MB`
-                          : `${(uploadedShpFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`}
-                      )
-                    </p>
-                  )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                const obj: Record<string, any> = {};
+                fd.forEach((val, key) => {
+                  obj[key] = val;
+                });
+                handleSaveForm(obj);
+              }}
+              className="space-y-3 pt-2 text-xs"
+            >
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Batch ID
+                  </label>
+                  <input
+                    name="batch_id"
+                    defaultValue={formRecord?.batch_id || ""}
+                    placeholder="Contoh: BATCH-MN-01"
+                    required
+                    className="w-full rounded-lg border border-gray-300 p-2 text-xs dark:border-gray-700 dark:bg-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Varietas
+                  </label>
+                  <input
+                    name="varietas"
+                    defaultValue={formRecord?.varietas || "DxP Dami Mas"}
+                    placeholder="DxP Dami Mas / Topaz"
+                    required
+                    className="w-full rounded-lg border border-gray-300 p-2 text-xs dark:border-gray-700 dark:bg-gray-800"
+                  />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Estate
+                  </label>
+                  <input
+                    name="estate"
+                    defaultValue={formRecord?.estate || "BUM 1"}
+                    className="w-full rounded-lg border border-gray-300 p-2 text-xs dark:border-gray-700 dark:bg-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Afdeling
+                  </label>
+                  <input
+                    name="afdeling"
+                    defaultValue={formRecord?.afdeling || "OA"}
+                    className="w-full rounded-lg border border-gray-300 p-2 text-xs dark:border-gray-700 dark:bg-gray-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Bibit Hidup
+                  </label>
+                  <input
+                    type="number"
+                    name="bibit_hidup"
+                    defaultValue={formRecord?.bibit_hidup || 9500}
+                    className="w-full rounded-lg border border-gray-300 p-2 text-xs dark:border-gray-700 dark:bg-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Siap Salur
+                  </label>
+                  <input
+                    type="number"
+                    name="bibit_siap_salur"
+                    defaultValue={formRecord?.bibit_siap_salur || 9000}
+                    className="w-full rounded-lg border border-gray-300 p-2 text-xs dark:border-gray-700 dark:bg-gray-800"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowUploadModal(false)}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  onClick={() => setShowFormModal(false)}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
-                  type="button"
-                  disabled={!uploadedShpFile}
-                  onClick={() => {
-                    alert("SHP plot bedengan nursery berhasil divalidasi.");
-                    setShowUploadModal(false);
-                    setUploadedShpFile(null);
-                  }}
-                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  type="submit"
+                  className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 cursor-pointer"
                 >
-                  Proses & Validasi
+                  Simpan Batch
                 </button>
               </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Modal Hapus */}
+      {deleteConfirmRecord && (
+        <Dialog open={!!deleteConfirmRecord} onOpenChange={() => setDeleteConfirmRecord(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-bold text-gray-900 dark:text-white">
+                Hapus Data Batch Pembibitan
+              </DialogTitle>
+              <DialogDescription className="text-xs text-gray-500 pt-2">
+                Apakah Anda yakin ingin menghapus batch{" "}
+                <strong className="text-gray-800 dark:text-gray-200">
+                  {deleteConfirmRecord.batch_id} ({deleteConfirmRecord.varietas})
+                </strong>
+                ? Tindakan ini tidak dapat dibatalkan.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 pt-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmRecord(null)}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700 cursor-pointer"
+              >
+                Hapus
+              </button>
             </div>
           </DialogContent>
         </Dialog>
       )}
-    </>
+    </div>
   );
 }

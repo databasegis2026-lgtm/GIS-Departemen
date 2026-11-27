@@ -115,7 +115,11 @@ export default function OperasionalDetailModal({
             </div>
             <div className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-800">
               <span className="text-slate-400 block text-[10px]">Update Peta</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">{record.update_peta}</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                {!record.update_peta || record.update_peta === "Baru Saja" || record.update_peta === "Sinkron DB"
+                  ? record.tanggal || new Date().toISOString().slice(0, 10)
+                  : record.update_peta}
+              </span>
             </div>
             <div className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-800">
               <span className="text-slate-400 block text-[10px]">Periode</span>

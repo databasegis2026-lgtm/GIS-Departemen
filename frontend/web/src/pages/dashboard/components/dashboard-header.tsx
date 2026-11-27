@@ -1,8 +1,9 @@
-import { AlertIcon, AspectFullscreenIcon, RegenerateIcon, SunIcon } from "@/icons";
+import { AspectFullscreenIcon, RegenerateIcon } from "@/icons";
 import { useState } from "react";
 import { MODULE_CONFIGS } from "../module-config";
-import type { DashboardFilterState, MonthOption, OperationalModuleOption, QuarterOption, RegionOption, WeatherCondition } from "../types";
+import type { DashboardFilterState, MonthOption, OperationalModuleOption, QuarterOption, RegionOption } from "../types";
 import DashboardExportDropdown from "./dashboard-export-dropdown";
+import PlantationWeatherWidget from "./plantation-weather-widget";
 
 interface DashboardHeaderProps {
   filters: DashboardFilterState;
@@ -118,39 +119,11 @@ export default function DashboardHeader({
 
         {/* Action Tools */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status Cuaca */}
-          <div
-            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${filters.weatherAlert && filters.weatherAlert !== "cerah"
-              ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
-              : "border-gray-200 bg-gray-50/80 text-gray-700 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-300"
-              }`}
-          >
-            {filters.weatherAlert && filters.weatherAlert !== "cerah" ? (
-              <AlertIcon className="size-3.5 text-rose-600 dark:text-rose-400" />
-            ) : (
-              <SunIcon className="size-3.5 text-amber-500" />
-            )}
-            <select
-              value={filters.weatherAlert || "cerah"}
-              onChange={(e) =>
-                onFilterChange({ weatherAlert: e.target.value as WeatherCondition })
-              }
-              className="cursor-pointer bg-transparent text-xs font-semibold outline-none"
-            >
-              <option value="cerah" className="text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                29°C Cerah
-              </option>
-              <option value="hujan_lebat" className="text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                Hujan Lebat
-              </option>
-              <option value="badai" className="text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                Badai Angin
-              </option>
-              <option value="banjir" className="text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                Genangan Air
-              </option>
-            </select>
-          </div>
+          {/* Telemetri Cuaca Kebun Real-time (Satelit Open-Meteo & BMKG) */}
+          <PlantationWeatherWidget
+            filters={filters}
+            onFilterChange={onFilterChange}
+          />
 
           {/* Tombol Segarkan */}
           <button

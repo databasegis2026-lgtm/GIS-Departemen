@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb";
 import { PageMeta } from "@/components/shared/page-meta";
@@ -12,7 +12,6 @@ import type {
 import {
   INITIAL_ACTION_LOGS,
   INITIAL_BACKUPS,
-  INITIAL_OPERASIONAL_RECORDS,
 } from "./mock-operasional";
 
 // Subkomponen
@@ -28,16 +27,72 @@ import RiwayatAksiModal from "./components/riwayat-aksi-modal";
 import BackupDataModal from "./components/backup-data-modal";
 import AfdelingBlockMapModal from "./components/afdeling-block-map-modal";
 import { printLaporanOperasional, printPetaKartografi } from "./print-operasional";
+import { supabase } from "@/lib/supabase";
+
+const OPERASIONAL_TABLE_MAP: Record<OperasionalRecord["aktivitas"], string> = {
+  produksi: "produksi",
+  pruning: "perawatan_pruning",
+  semprot: "perawatan_semprot",
+  pemupukan: "perawatan_pemupukan",
+  pasar_pikul: "perawatan_pasar_pikul",
+  jangkos: "perawatan_jangkos",
+};
+
+function getSupabaseTableByAktivitas(aktivitas: string): string {
+  return (
+    OPERASIONAL_TABLE_MAP[aktivitas as OperasionalRecord["aktivitas"]] ||
+    "perawatan_pruning"
+  );
+}
+
+function getTabFromPath(pathname: string): AktivitasType {
+  const p = pathname.toLowerCase();
+  if (p.includes("/produksi")) return "produksi";
+  if (p.includes("/pruning")) return "pruning";
+  if (p.includes("/pasar-pikul")) return "pasar_pikul";
+  if (p.includes("/pemupukan")) return "pemupukan";
+  if (p.includes("/semprot")) return "semprot";
+  if (p.includes("/jangkos")) return "jangkos";
+  return "pruning";
+}
+
+function toDbPayload(r: OperasionalRecord) {
+  return {
+    id: r.id,
+    region: r.region,
+    estate: r.estate,
+    afdeling: r.afdeling,
+    blok: r.blok,
+    warung: r.warung,
+    luas_ha: r.luas_ha,
+    realisasi_luas_ha: r.realisasi_luas_ha,
+    capaian_persen: r.capaian_persen,
+    sph: r.sph,
+    kondisi: r.kondisi,
+    kontraktor: r.kontraktor,
+    update_peta: r.update_peta,
+    periode: r.periode,
+    tanggal: r.tanggal,
+    keterangan: r.keterangan,
+    coordinates: r.polygonCoords
+      ? {
+          type: "Polygon",
+          coordinates: [r.polygonCoords.map(([lat, lng]) => [lng, lat])],
+        }
+      : null,
+  };
+}
 
 export default function DataOperasionalPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [records, setRecords] = useState<OperasionalRecord[]>(INITIAL_OPERASIONAL_RECORDS);
-  const [actionLogs, setActionLogs] = useState<ActionLogItem[]>(INITIAL_ACTION_LOGS);
-  const [backups, setBackups] = useState<BackupItem[]>(INITIAL_BACKUPS);
+  // Ambil tab aktif langsung dari URL secara sinkron agar tidak ada race condition saat refresh
+  const currentTabFromUrl = useMemo(() => getTabFromPath(location.pathname), [location.pathname]);
+  const [activeTab, setActiveTab] = useState<AktivitasType>(() => getTabFromPath(location.pathname));
 
-  const [activeTab, setActiveTab] = useState<AktivitasType>("pruning");
+  const [records, setRecords] = useState<OperasionalRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // State Filter Lengkap (Sesuai Gambar 2)
   const [selectedYear, setSelectedYear] = useState("all");
@@ -45,7 +100,7 @@ export default function DataOperasionalPage() {
   const [selectedEstate, setSelectedEstate] = useState("all");
   const [selectedAfdeling, setSelectedAfdeling] = useState("all");
   const [selectedBlock, setSelectedBlock] = useState("all");
-  const [selectedType, setSelectedType] = useState("pruning");
+  const [selectedType, setSelectedType] = useState<string>(() => getTabFromPath(location.pathname));
   const [selectedCondition, setSelectedCondition] = useState("all");
 
   // Search & Pagination Limit
@@ -55,6 +110,78 @@ export default function DataOperasionalPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const [notice, setNotice] = useState("");
+
+  const [actionLogs, setActionLogs] = useState<ActionLogItem[]>(INITIAL_ACTION_LOGS);
+  const [backups, setBackups] = useState<BackupItem[]>(INITIAL_BACKUPS);
+
+  // Selaraskan state aktif jika path URL berubah
+  useEffect(() => {
+    setActiveTab(currentTabFromUrl);
+    setSelectedType(currentTabFromUrl);
+    setCurrentPage(1);
+  }, [currentTabFromUrl]);
+
+  // Fungsi muat ulang data dari database Supabase untuk aktivitas spesifik
+  const loadFromOperationalTables = useCallback(async (tabToLoad: AktivitasType) => {
+    const act = tabToLoad === "all" ? "pruning" : (tabToLoad as OperasionalRecord["aktivitas"]);
+    const targetTable = getSupabaseTableByAktivitas(act);
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from(targetTable)
+        .select(
+          "id,region,estate,afdeling,blok,warung,luas_ha,realisasi_luas_ha,capaian_persen,sph,kondisi,kontraktor,update_peta,periode,tanggal,keterangan,coordinates",
+          {},
+          { limit: 3000 }
+        );
+
+      if (!error && Array.isArray(data)) {
+        const loaded: OperasionalRecord[] = data.map((row: any) => {
+          let coords: [number, number][] | undefined = undefined;
+          if (row.coordinates?.coordinates?.[0]) {
+            coords = row.coordinates.coordinates[0].map(
+              ([lng, lat]: [number, number]) => [lat, lng]
+            );
+          }
+          return {
+            id: row.id,
+            region: row.region || "REGION 1",
+            estate: row.estate || "BUM 1",
+            afdeling: row.afdeling || "AFD 1",
+            blok: row.blok || "BLK",
+            warung: row.warung || `Warung ${row.afdeling || "AFD 1"}`,
+            luas_ha: Number(row.luas_ha ?? 0),
+            realisasi_luas_ha: Number(row.realisasi_luas_ha ?? 0),
+            capaian_persen: Number(row.capaian_persen ?? 0),
+            sph: Number(row.sph ?? 136),
+            kondisi: row.kondisi || "BAPP",
+            kontraktor: row.kontraktor || "Mandor Lapangan",
+            update_peta: row.update_peta || "Sinkron DB",
+            periode: row.periode || "Rotasi 1 2026",
+            tanggal: row.tanggal || new Date().toISOString().slice(0, 10),
+            keterangan: row.keterangan || "",
+            aktivitas: act,
+            polygonCoords: coords,
+          };
+        });
+
+        setRecords(loaded);
+      } else {
+        setRecords([]);
+      }
+    } catch (err) {
+      console.error("Gagal memuat data dari database:", err);
+      setRecords([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Muat data langsung dari database saat komponen dimuat atau URL tab berganti
+  useEffect(() => {
+    loadFromOperationalTables(currentTabFromUrl);
+  }, [currentTabFromUrl, loadFromOperationalTables]);
 
   // Modal State
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -69,39 +196,22 @@ export default function DataOperasionalPage() {
   const [spatialUploadOpen, setSpatialUploadOpen] = useState(false);
   const [actionLogsOpen, setActionLogsOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
-
-  // Sync tab dari URL rute
-  useEffect(() => {
-    const path = location.pathname.toLowerCase();
-    if (path.includes("/produksi")) {
-      setActiveTab("produksi");
-      setSelectedType("produksi");
-    } else if (path.includes("/pruning")) {
-      setActiveTab("pruning");
-      setSelectedType("pruning");
-    } else if (path.includes("/pasar-pikul")) {
-      setActiveTab("pasar_pikul");
-      setSelectedType("pasar_pikul");
-    } else if (path.includes("/pemupukan")) {
-      setActiveTab("pemupukan");
-      setSelectedType("pemupukan");
-    } else if (path.includes("/semprot")) {
-      setActiveTab("semprot");
-      setSelectedType("semprot");
-    } else if (path.includes("/jangkos")) {
-      setActiveTab("jangkos");
-      setSelectedType("jangkos");
-    } else if (path === "/data-operasional" || path === "/data-operasional/perawatan") {
-      setActiveTab("pruning");
-      setSelectedType("pruning");
-    }
-  }, [location.pathname]);
+  const [uploadResultReport, setUploadResultReport] = useState<{
+    fileName: string;
+    total: number;
+    successCount: number;
+    failedCount: number;
+    tables: string[];
+    errors: string[];
+    missingAttributeCount: number;
+  } | null>(null);
 
   // Handle pergantian tab & navigasi URL
   const handleTabChange = (tab: AktivitasType) => {
     setActiveTab(tab);
     setSelectedType(tab);
     setCurrentPage(1);
+    loadFromOperationalTables(tab);
     if (tab === "produksi") {
       navigate("/data-operasional/produksi");
     } else if (tab === "pasar_pikul") {
@@ -221,7 +331,7 @@ export default function DataOperasionalPage() {
   }, [filteredRecords]);
 
   // Tambah / Update Record
-  const handleSaveRecord = (savedRecord: OperasionalRecord) => {
+  const handleSaveRecord = async (savedRecord: OperasionalRecord) => {
     const isEdit = records.some((r) => r.id === savedRecord.id);
     setRecords((prev) => {
       const idx = prev.findIndex((r) => r.id === savedRecord.id);
@@ -233,7 +343,34 @@ export default function DataOperasionalPage() {
       return [savedRecord, ...prev];
     });
 
-    // Catat ke log aksi
+    const targetTable = getSupabaseTableByAktivitas(savedRecord.aktivitas);
+    let dbNotice = "";
+    try {
+      const dbRow = toDbPayload(savedRecord);
+      const res = isEdit
+        ? await supabase.from(targetTable).update(dbRow, { id: `eq.${savedRecord.id}` })
+        : await supabase.from(targetTable).insert(dbRow);
+
+      if (res.error) {
+        dbNotice = ` (Gagal masuk DB ${targetTable}: ${res.error.message || "Cek skema tabel"})`;
+      } else {
+        dbNotice = ` & tersimpan ke tabel DB '${targetTable}'.`;
+      }
+
+      supabase
+        .logAudit({
+          action: isEdit ? "UPDATE" : "INSERT",
+          table_name: targetTable,
+          record_id: savedRecord.id,
+          details: `${isEdit ? "Perbarui" : "Tambah"} record operasional Blok ${savedRecord.blok} (${savedRecord.aktivitas}).`,
+          new_data: savedRecord,
+        })
+        .catch(() => {});
+    } catch (err: any) {
+      dbNotice = ` (Gagal koneksi DB ${targetTable}: ${err?.message || "Unknown"})`;
+    }
+
+    // Catat ke log aksi lokal
     const newLog: ActionLogItem = {
       id: `log-${Date.now()}`,
       waktu: new Date().toLocaleString("id-ID", {
@@ -247,20 +384,34 @@ export default function DataOperasionalPage() {
       aksi: isEdit ? "UBAH" : "TAMBAH",
       blok: `Blok ${savedRecord.blok}`,
       status: "Sukses",
-      catatan: `${isEdit ? "Perbarui" : "Tambah"} record ${savedRecord.aktivitas} (${savedRecord.realisasi_luas_ha} Ha).`,
+      catatan: `${isEdit ? "Perbarui" : "Tambah"} record ${savedRecord.aktivitas} -> tabel ${targetTable} (${savedRecord.realisasi_luas_ha} Ha).`,
     };
     setActionLogs((prev) => [newLog, ...prev]);
 
-    setNotice(`Data operasional Blok ${savedRecord.blok} berhasil disimpan.`);
-    setTimeout(() => setNotice(""), 3500);
+    setNotice(`Data operasional Blok ${savedRecord.blok} disimpan${dbNotice}`);
+    setTimeout(() => setNotice(""), 5000);
   };
 
   // Hapus Record
-  const handleDeleteRecord = (id: string) => {
+  const handleDeleteRecord = async (id: string) => {
     const target = records.find((r) => r.id === id);
     setRecords((prev) => prev.filter((r) => r.id !== id));
 
     if (target) {
+      const targetTable = getSupabaseTableByAktivitas(target.aktivitas);
+      try {
+        await supabase.from(targetTable).delete({ id: `eq.${id}` });
+        supabase
+          .logAudit({
+            action: "DELETE",
+            table_name: targetTable,
+            record_id: id,
+            details: `Hapus record operasional Blok ${target.blok} (${target.aktivitas}).`,
+            old_data: target,
+          })
+          .catch(() => {});
+      } catch {}
+
       const newLog: ActionLogItem = {
         id: `log-${Date.now()}`,
         waktu: new Date().toLocaleString("id-ID", {
@@ -274,7 +425,7 @@ export default function DataOperasionalPage() {
         aksi: "HAPUS",
         blok: `Blok ${target.blok}`,
         status: "Sukses",
-        catatan: `Hapus record transaksi operasional ${target.aktivitas}.`,
+        catatan: `Hapus record transaksi operasional ${target.aktivitas} dari tabel ${targetTable}.`,
       };
       setActionLogs((prev) => [newLog, ...prev]);
     }
@@ -283,8 +434,86 @@ export default function DataOperasionalPage() {
     setTimeout(() => setNotice(""), 3500);
   };
 
-  // Handler Sukses Unggah Spasial
-  const handleSpatialUploadSuccess = (fileName: string, targetAktivitas: string, estate: string) => {
+  // Handler Sukses Unggah Spasial (Pisahkan ke tabel produksi vs masing-masing sub perawatan)
+  const handleSpatialUploadSuccess = async (
+    fileName: string,
+    targetAktivitas: string,
+    estate: string,
+    newRecords?: OperasionalRecord[]
+  ) => {
+    const recordCount = newRecords ? newRecords.length : 0;
+    const syncedTables: string[] = [];
+    const dbErrors: string[] = [];
+    let totalInserted = 0;
+    let missingAttrCount = 0;
+
+    if (newRecords && newRecords.length > 0) {
+      setRecords((prev) => [...newRecords, ...prev]);
+
+      // Hitung record yang tidak memiliki nama blok / luas awal
+      missingAttrCount = newRecords.filter(
+        (r) => r.keterangan.includes("Belum ada data") || r.blok.includes("Belum Ada Nama")
+      ).length;
+
+      // Kelompokkan record berdasarkan aktivitas -> tabel DB masing-masing
+      const groupedByTable: Record<string, OperasionalRecord[]> = {};
+      newRecords.forEach((r) => {
+        const tbl = getSupabaseTableByAktivitas(r.aktivitas);
+        if (!groupedByTable[tbl]) groupedByTable[tbl] = [];
+        groupedByTable[tbl].push(r);
+      });
+
+      for (const [tableName, groupRecords] of Object.entries(groupedByTable)) {
+        try {
+          const rowsToInsert = groupRecords.map(toDbPayload);
+          const BATCH_SIZE = 100;
+          let insertedCount = 0;
+          const failedBatches: string[] = [];
+
+          for (let i = 0; i < rowsToInsert.length; i += BATCH_SIZE) {
+            const batch = rowsToInsert.slice(i, i + BATCH_SIZE);
+            const { error } = await supabase.from(tableName).insert(batch);
+            if (error) {
+              failedBatches.push(`Baris ${i + 1}-${i + batch.length}: ${error.message || JSON.stringify(error)}`);
+            } else {
+              insertedCount += batch.length;
+              totalInserted += batch.length;
+            }
+          }
+
+          if (failedBatches.length > 0) {
+            dbErrors.push(`${tableName}: ${failedBatches.join("; ")} (Berhasil ${insertedCount}/${groupRecords.length})`);
+          } else {
+            syncedTables.push(`${tableName} (${insertedCount} baris)`);
+          }
+
+          supabase
+            .logAudit({
+              action: "UPLOAD",
+              table_name: tableName,
+              details: `Unggah berkas spasial ${fileName} (${insertedCount}/${groupRecords.length} blok berhasil) untuk estate ${estate} ke tabel ${tableName}.`,
+              new_data: { fileName, estate, tableName, total: groupRecords.length, inserted: insertedCount },
+            })
+            .catch(() => {});
+        } catch (err: any) {
+          dbErrors.push(`${tableName}: ${err?.message || "Gagal koneksi"}`);
+        }
+      }
+    }
+
+    const tableSummary = syncedTables.length > 0 ? syncedTables.join(", ") : getSupabaseTableByAktivitas(targetAktivitas);
+
+    // Buka dialog laporan unggah detail agar surveyor / admin mengetahui status data persis
+    setUploadResultReport({
+      fileName,
+      total: recordCount,
+      successCount: totalInserted,
+      failedCount: recordCount - totalInserted,
+      tables: syncedTables,
+      errors: dbErrors,
+      missingAttributeCount: missingAttrCount,
+    });
+
     const newLog: ActionLogItem = {
       id: `log-${Date.now()}`,
       waktu: new Date().toLocaleString("id-ID", {
@@ -296,13 +525,25 @@ export default function DataOperasionalPage() {
       }),
       pengguna: "Surveyor GIS",
       aksi: "UNGGAH_SPASIAL",
-      blok: `${estate} - Poligon Baru`,
-      status: "Sukses",
-      catatan: `Unggah berkas spasial ${fileName} untuk layer ${targetAktivitas}.`,
+      blok: `${estate} (${recordCount} Blok)`,
+      status: dbErrors.length > 0 ? "Gagal" : "Sukses",
+      catatan:
+        dbErrors.length > 0
+          ? `Unggah ${fileName} (${totalInserted}/${recordCount} baris masuk DB). Error: ${dbErrors.join("; ")}`
+          : `Unggah ${fileName} (${recordCount} blok) sukses masuk database: ${tableSummary}. Termasuk ${missingAttrCount} blok dengan label 'Belum ada data'.`,
     };
     setActionLogs((prev) => [newLog, ...prev]);
-    setNotice(`Berkas spasial ${fileName} berhasil diunggah dan disinkronkan ke layer.`);
-    setTimeout(() => setNotice(""), 4000);
+
+    if (dbErrors.length > 0) {
+      setNotice(
+        `Unggah ${fileName}: Berhasil masuk DB ${totalInserted} dari ${recordCount} baris. ${dbErrors.join(" | ")}`
+      );
+    } else {
+      setNotice(
+        `Berkas ${fileName} (${recordCount} blok) berhasil MASUK DATABASE ke tabel: ${tableSummary}.`
+      );
+    }
+    setTimeout(() => setNotice(""), 8000);
   };
 
   // Handler Buat Snapshot Backup
@@ -504,9 +745,9 @@ export default function DataOperasionalPage() {
           onPrintLaporan={handlePrintLaporan}
           onPrintPeta={handlePrintPeta}
           onRefresh={() => {
-            setRecords([...INITIAL_OPERASIONAL_RECORDS]);
             handleResetFilter();
-            setNotice("Data operasional berhasil disegarkan.");
+            loadFromOperationalTables(activeTab);
+            setNotice("Data operasional berhasil disinkronkan langsung dari database.");
             setTimeout(() => setNotice(""), 3000);
           }}
         />
@@ -514,16 +755,31 @@ export default function DataOperasionalPage() {
 
       {/* 4. Tabel Transaksi Lapangan (15 Standar Kolom + Kolom Aksi Sticky) */}
       <section aria-label="Tabel Operasional" className="w-full min-w-0">
-        <OperasionalTable
-          records={paginatedRecords}
-          onOpenDetail={(record) => setDetailRecord(record)}
-          onOpenEdit={(record) => {
-            setEditingRecord(record);
-            setFormModalOpen(true);
-          }}
-          onOpenDelete={(record) => setDeletingRecord(record)}
-          onOpenAfdelingMap={(record) => setMapModalRecord(record)}
-        />
+        {isLoading ? (
+          <div className="w-full min-w-0 rounded-xl border border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900/40 shadow-xs">
+            <svg className="size-8 mx-auto text-emerald-600 dark:text-emerald-400 animate-spin mb-3" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+              Menyinkronkan data {activeTab} dari database Supabase...
+            </h3>
+            <p className="mt-1 text-xs text-slate-400">
+              Memuat data riil operasional kebun secara aman.
+            </p>
+          </div>
+        ) : (
+          <OperasionalTable
+            records={paginatedRecords}
+            onOpenDetail={(record) => setDetailRecord(record)}
+            onOpenEdit={(record) => {
+              setEditingRecord(record);
+              setFormModalOpen(true);
+            }}
+            onOpenDelete={(record) => setDeletingRecord(record)}
+            onOpenAfdelingMap={(record) => setMapModalRecord(record)}
+          />
+        )}
 
         {/* Paginasi Sederhana */}
         {filteredRecords.length > rowsPerPage && (
@@ -615,6 +871,96 @@ export default function DataOperasionalPage() {
           isOpen={Boolean(mapModalRecord)}
           onClose={() => setMapModalRecord(null)}
         />
+      )}
+
+      {/* Modal Laporan Hasil Unggah & Audit Database */}
+      {uploadResultReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <svg className="size-5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span>Laporan Sinkronisasi Database</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setUploadResultReport(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 text-xs text-slate-600 dark:text-slate-300">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Berkas:</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{uploadResultReport.fileName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Total Poligon:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{uploadResultReport.total} Blok</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Berhasil Masuk Database:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{uploadResultReport.successCount} Blok</span>
+                </div>
+                {uploadResultReport.failedCount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Gagal Masuk:</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400">{uploadResultReport.failedCount} Blok</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Tabel Tujuan DB:</span>
+                  <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                    {uploadResultReport.tables.join(", ") || "-"}
+                  </span>
+                </div>
+              </div>
+
+              {uploadResultReport.missingAttributeCount > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300">
+                  <div className="font-semibold flex items-center gap-1.5 mb-1">
+                    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{uploadResultReport.missingAttributeCount} Poligon Tanpa Atribut Lengkap</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    Poligon tetap berhasil disimpan ke database tanpa dieliminasi, dengan label <strong>"Belum ada data"</strong> atau <strong>"BLOK (Belum Ada Nama)"</strong>. Geometri koordinat spasial tetap terjaga 100%.
+                  </p>
+                </div>
+              )}
+
+              {uploadResultReport.errors.length > 0 && (
+                <div className="rounded-lg border border-rose-300 bg-rose-50 p-3 dark:border-rose-900/50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300">
+                  <div className="font-semibold mb-1">Pesan Error Database:</div>
+                  <div className="max-h-24 overflow-y-auto space-y-1 font-mono text-[10px]">
+                    {uploadResultReport.errors.map((err, i) => (
+                      <div key={i}>• {err}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setUploadResultReport(null)}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition"
+              >
+                Tutup & Lihat Data
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

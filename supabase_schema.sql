@@ -328,3 +328,80 @@ grant all on public.batas_afdeling to anon, authenticated;
 grant all on public.batas_warung to anon, authenticated;
 grant all on public.batas_blok to anon, authenticated;
 grant all on public.batas_ancak to anon, authenticated;
+
+-- ------------------------------------------------------------------------------
+-- 5. TABEL DATA OPERASIONAL (PRODUKSI & MASING-MASING SUB PERAWATAN)
+-- ------------------------------------------------------------------------------
+
+create table if not exists public.produksi (
+  id text primary key,
+  region text,
+  estate text,
+  afdeling text,
+  blok text,
+  warung text,
+  luas_ha numeric,
+  realisasi_luas_ha numeric,
+  capaian_persen numeric,
+  sph numeric,
+  kondisi text,
+  kontraktor text,
+  update_peta text,
+  periode text,
+  tanggal text,
+  keterangan text,
+  coordinates jsonb,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.perawatan_pruning (
+  like public.produksi including all
+);
+
+create table if not exists public.perawatan_semprot (
+  like public.produksi including all
+);
+
+create table if not exists public.perawatan_pemupukan (
+  like public.produksi including all
+);
+
+create table if not exists public.perawatan_pasar_pikul (
+  like public.produksi including all
+);
+
+create table if not exists public.perawatan_jangkos (
+  like public.produksi including all
+);
+
+alter table public.produksi enable row level security;
+alter table public.perawatan_pruning enable row level security;
+alter table public.perawatan_semprot enable row level security;
+alter table public.perawatan_pemupukan enable row level security;
+alter table public.perawatan_pasar_pikul enable row level security;
+alter table public.perawatan_jangkos enable row level security;
+
+drop policy if exists "Allow all operations for anon" on public.produksi;
+create policy "Allow all operations for anon" on public.produksi for all using (true) with check (true);
+
+drop policy if exists "Allow all operations for anon" on public.perawatan_pruning;
+create policy "Allow all operations for anon" on public.perawatan_pruning for all using (true) with check (true);
+
+drop policy if exists "Allow all operations for anon" on public.perawatan_semprot;
+create policy "Allow all operations for anon" on public.perawatan_semprot for all using (true) with check (true);
+
+drop policy if exists "Allow all operations for anon" on public.perawatan_pemupukan;
+create policy "Allow all operations for anon" on public.perawatan_pemupukan for all using (true) with check (true);
+
+drop policy if exists "Allow all operations for anon" on public.perawatan_pasar_pikul;
+create policy "Allow all operations for anon" on public.perawatan_pasar_pikul for all using (true) with check (true);
+
+drop policy if exists "Allow all operations for anon" on public.perawatan_jangkos;
+create policy "Allow all operations for anon" on public.perawatan_jangkos for all using (true) with check (true);
+
+grant all on public.produksi to anon, authenticated;
+grant all on public.perawatan_pruning to anon, authenticated;
+grant all on public.perawatan_semprot to anon, authenticated;
+grant all on public.perawatan_pemupukan to anon, authenticated;
+grant all on public.perawatan_pasar_pikul to anon, authenticated;
+grant all on public.perawatan_jangkos to anon, authenticated;
