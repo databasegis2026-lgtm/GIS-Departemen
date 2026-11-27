@@ -221,7 +221,88 @@ export default function EditPetaSpasialPage() {
         console.error("Gagal memuat poligon dari DB Supabase:", err);
       }
 
-      // Fallback jika database belum ada data untuk estate ini
+      // Fallback 1: Jika tabel aktivitas operasional kosong, muat data master baku dari batas_blok Supabase!
+      try {
+        const estateFilter: Record<string, string> = estate && estate !== "all" ? { Estate: `eq.${estate}` } : {};
+        const { data: masterData, error: masterErr } = await supabase
+          .from("batas_blok")
+          .select("*", estateFilter, { limit: 1500 });
+
+        if (!masterErr && Array.isArray(masterData) && masterData.length > 0) {
+          const loadedMaster: EstatePolygonItem[] = [];
+          masterData.forEach((row: any) => {
+            const geom = row.coordinates;
+            if (!geom) return;
+
+            const rawPolygons: [number, number][][][] = [];
+            if (geom.type === "Polygon" && Array.isArray(geom.coordinates)) {
+              rawPolygons.push(geom.coordinates);
+            } else if (geom.type === "MultiPolygon" && Array.isArray(geom.coordinates)) {
+              geom.coordinates.forEach((poly: any) => {
+                if (Array.isArray(poly)) rawPolygons.push(poly);
+              });
+            } else if (Array.isArray(geom.coordinates)) {
+              rawPolygons.push(geom.coordinates);
+            }
+
+            rawPolygons.forEach((polyCoords, partIdx) => {
+              const outerRing = polyCoords[0];
+              if (!outerRing || outerRing.length < 3) return;
+
+              const coords: [number, number][] = outerRing.map(
+                ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+              );
+
+              let partAreaHa = Number(row.Luas ?? row.luas ?? row.luas_ha ?? 0);
+              if (partAreaHa <= 0 && outerRing.length >= 3) {
+                try {
+                  const turfPoly = turf.polygon([outerRing]);
+                  const m2 = turf.area(turfPoly);
+                  if (m2 > 0) partAreaHa = Number((m2 / 10000).toFixed(2));
+                } catch {
+                  partAreaHa = 25.0;
+                }
+              }
+
+              const blokName = String(row.Blok ?? row.blok ?? row.kode_blok ?? "BLK");
+              const isTarget = blokName === blok || row.id === `poly-${blok}`;
+              const partId =
+                rawPolygons.length > 1
+                  ? `${row.id || "poly-" + blokName}-part-${partIdx}`
+                  : (row.id || `poly-${blokName}`);
+
+              loadedMaster.push({
+                id: partId,
+                name: `Blok ${blokName} (${row.Estate || estate})`,
+                blok: blokName,
+                luas_ha: partAreaHa,
+                kondisi: "BAPP",
+                color: "#15803d",
+                coords,
+                isTargetBlok: isTarget,
+                afdeling: row.Afdeling || row.afdeling || "AFD 1",
+                estate: row.Estate || estate,
+                keterangan: "Batas Baku Master Kebun",
+              });
+            });
+          });
+
+          if (isMounted && loadedMaster.length > 0) {
+            setPolygons(loadedMaster);
+            const target = loadedMaster.find((p) => p.isTargetBlok || p.blok === blok);
+            if (target) {
+              setSelectedPolyIds([target.id]);
+            } else {
+              setSelectedPolyIds([loadedMaster[0].id]);
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Gagal memuat batas_blok fallback:", err);
+      }
+
+      // Fallback 2: Jika database belum ada data untuk estate ini
       if (isMounted) {
         const fallback = getEstatePolygons(estate, blok, aktivitas);
         setPolygons(fallback);
