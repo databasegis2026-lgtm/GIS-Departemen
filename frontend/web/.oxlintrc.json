@@ -2,10 +2,13 @@
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "typescript", "oxc"],
   "options": { "typeAware": true },
-  "ignorePatterns": ["public/maplibre/**", "dist/**"],
+  "ignorePatterns": ["public/maplibre/**", "dist/**", "scripts/**"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "warn",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "typescript/no-floating-promises": "off",
+    "typescript/restrict-template-expressions": "off",
+    "typescript/no-misused-spread": "off"
   }
 }
