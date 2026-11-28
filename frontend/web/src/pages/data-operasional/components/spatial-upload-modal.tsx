@@ -177,7 +177,18 @@ export default function SpatialUploadModal({
         const mergedFeatures: any[] = [];
         groupedFeaturesMap.forEach((parts) => {
           if (parts.length === 1) {
-            mergedFeatures.push(parts[0]);
+            let singleGeom = parts[0].geometry;
+            if (singleGeom?.type === "Polygon" && singleGeom.coordinates?.length > 1) {
+              singleGeom = { ...singleGeom, coordinates: [singleGeom.coordinates[0]] };
+            } else if (singleGeom?.type === "MultiPolygon" && Array.isArray(singleGeom.coordinates)) {
+              singleGeom = {
+                ...singleGeom,
+                coordinates: singleGeom.coordinates.map((poly: any) =>
+                  Array.isArray(poly) && poly[0] ? [poly[0]] : poly
+                ),
+              };
+            }
+            mergedFeatures.push({ ...parts[0], geometry: singleGeom });
           } else {
             // Urutkan potongan berdasarkan luas terbesar (agar properti utama mengacu ke potongan utama)
             parts.sort((a, b) => {
@@ -201,6 +212,18 @@ export default function SpatialUploadModal({
                 }
               });
               mergedGeom = { type: "MultiPolygon", coordinates: allPolys };
+            }
+
+            // Sanitasi: hilangkan cincin interior (anti-bolong/hole) agar seluruh blok utuh padat
+            if (mergedGeom.type === "Polygon" && mergedGeom.coordinates?.length > 1) {
+              mergedGeom = { ...mergedGeom, coordinates: [mergedGeom.coordinates[0]] };
+            } else if (mergedGeom.type === "MultiPolygon" && Array.isArray(mergedGeom.coordinates)) {
+              mergedGeom = {
+                ...mergedGeom,
+                coordinates: mergedGeom.coordinates.map((poly: any) =>
+                  Array.isArray(poly) && poly[0] ? [poly[0]] : poly
+                ),
+              };
             }
 
             let sumAreaHa = 0;
@@ -351,7 +374,18 @@ export default function SpatialUploadModal({
         const mergedGeoJsonFeatures: any[] = [];
         groupedGeoJsonMap.forEach((parts) => {
           if (parts.length === 1) {
-            mergedGeoJsonFeatures.push(parts[0]);
+            let singleGeom = parts[0].geometry;
+            if (singleGeom?.type === "Polygon" && singleGeom.coordinates?.length > 1) {
+              singleGeom = { ...singleGeom, coordinates: [singleGeom.coordinates[0]] };
+            } else if (singleGeom?.type === "MultiPolygon" && Array.isArray(singleGeom.coordinates)) {
+              singleGeom = {
+                ...singleGeom,
+                coordinates: singleGeom.coordinates.map((poly: any) =>
+                  Array.isArray(poly) && poly[0] ? [poly[0]] : poly
+                ),
+              };
+            }
+            mergedGeoJsonFeatures.push({ ...parts[0], geometry: singleGeom });
           } else {
             parts.sort((a, b) => {
               try {
@@ -374,6 +408,18 @@ export default function SpatialUploadModal({
                 }
               });
               mergedGeom = { type: "MultiPolygon", coordinates: allPolys };
+            }
+
+            // Sanitasi: hilangkan cincin interior (anti-bolong/hole) agar seluruh blok utuh padat
+            if (mergedGeom.type === "Polygon" && mergedGeom.coordinates?.length > 1) {
+              mergedGeom = { ...mergedGeom, coordinates: [mergedGeom.coordinates[0]] };
+            } else if (mergedGeom.type === "MultiPolygon" && Array.isArray(mergedGeom.coordinates)) {
+              mergedGeom = {
+                ...mergedGeom,
+                coordinates: mergedGeom.coordinates.map((poly: any) =>
+                  Array.isArray(poly) && poly[0] ? [poly[0]] : poly
+                ),
+              };
             }
 
             let sumAreaHa = 0;

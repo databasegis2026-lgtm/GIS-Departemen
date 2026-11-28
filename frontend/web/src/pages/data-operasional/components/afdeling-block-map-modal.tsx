@@ -132,7 +132,7 @@ export default function AfdelingBlockMapModal({
         const { data } = await supabase.from("batas_blok").select(
           "id,Estate,Afdeling,Blok,Luas,coordinates",
           { Estate: `eq.${currentEstate}`, Afdeling: `eq.${currentAfdeling}` },
-          { limit: 200 }
+          { limit: 500 }
         );
         if (active && Array.isArray(data)) {
           setMasterAfdBlocks(data);
@@ -656,7 +656,7 @@ export default function AfdelingBlockMapModal({
 
         let layer: L.Layer | null = null;
 
-        // 1. Gambar poligon dasar utuh (outer ring) terlebih dahulu agar poligon tidak memiliki lubang/bolong tembus pandang
+        // 1. Dapatkan koordinat ring terluar (outer boundary)
         let outerCoords: [number, number][] = item.polygonCoords;
         if ((!outerCoords || outerCoords.length < 3) && item.rawGeometry) {
           try {
@@ -668,19 +668,26 @@ export default function AfdelingBlockMapModal({
           } catch {}
         }
 
-        if (outerCoords && outerCoords.length >= 3) {
-          L.polygon(outerCoords, {
-            color: isTargetBlock ? "#ffffff" : "#1e293b",
-            weight: isTargetBlock ? 3 : 1.2,
-            fillColor: item.statusColor,
-            fillOpacity: isTargetBlock ? 0.85 : 0.65,
-            opacity: isTargetBlock ? 1 : 0.8,
-          }).addTo(polygonGroup);
+        // 2. Bersihkan geometri GeoJSON dari cincin interior (hole/lubang) agar poligon selalu utuh padat
+        let cleanGeom: any = null;
+        if (item.rawGeometry) {
+          try {
+            if (item.rawGeometry.type === "Polygon" && item.rawGeometry.coordinates?.[0]) {
+              cleanGeom = { type: "Polygon", coordinates: [item.rawGeometry.coordinates[0]] };
+            } else if (item.rawGeometry.type === "MultiPolygon" && Array.isArray(item.rawGeometry.coordinates)) {
+              cleanGeom = {
+                type: "MultiPolygon",
+                coordinates: item.rawGeometry.coordinates.map((poly: any) =>
+                  Array.isArray(poly) && poly[0] ? [poly[0]] : poly
+                ),
+              };
+            }
+          } catch {}
         }
 
-        // 2. Render layer geometri GeoJSON
-        if (item.rawGeometry) {
-          layer = L.geoJSON(item.rawGeometry, {
+        // 3. Render layer poligon utuh (tanpa bolong)
+        if (cleanGeom) {
+          layer = L.geoJSON(cleanGeom, {
             style: {
               color: isTargetBlock ? "#ffffff" : "#1e293b",
               weight: isTargetBlock ? 3 : 1.2,
@@ -689,8 +696,8 @@ export default function AfdelingBlockMapModal({
               opacity: isTargetBlock ? 1 : 0.8,
             },
           }).addTo(polygonGroup);
-        } else if (item.polygonCoords && item.polygonCoords.length >= 3) {
-          layer = L.polygon(item.polygonCoords, {
+        } else if (outerCoords && outerCoords.length >= 3) {
+          layer = L.polygon(outerCoords, {
             color: isTargetBlock ? "#ffffff" : "#1e293b",
             weight: isTargetBlock ? 3 : 1.2,
             fillColor: item.statusColor,

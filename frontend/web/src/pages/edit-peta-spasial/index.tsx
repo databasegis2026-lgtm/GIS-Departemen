@@ -137,12 +137,13 @@ export default function EditPetaSpasialPage() {
 
       try {
         const estateFilter: Record<string, string> = estate && estate !== "all" ? { Estate: `eq.${estate}` } : {};
+        const opsFilter: Record<string, string> = estate && estate !== "all" ? { estate: `eq.${estate}` } : {};
 
-        // 1. Ambil seluruh data master batas_blok dengan 2 paginasi (0-1000 dan 1000-2000) agar 1.329 blok BUM 1 termuat 100% tanpa terpotong
+        // 1. Ambil seluruh data master batas_blok dengan paginasi agar seluruh blok master termuat 100% tanpa terpotong
         const [resMaster1, resMaster2, resOps] = await Promise.all([
           supabase.from("batas_blok").select("*", estateFilter, { offset: 0, limit: 1000 }),
           supabase.from("batas_blok").select("*", estateFilter, { offset: 1000, limit: 1000 }),
-          supabase.from(targetTable).select("*", {}, { limit: 5000 }),
+          supabase.from(targetTable).select("*", opsFilter, { limit: 5000 }),
         ]);
 
         const masterData: any[] = [
