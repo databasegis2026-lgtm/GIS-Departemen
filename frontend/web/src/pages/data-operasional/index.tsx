@@ -48,7 +48,7 @@ const OPERASIONAL_TABLE_MAP: Record<OperasionalRecord["aktivitas"], string> = {
 function getSupabaseTableByAktivitas(aktivitas: string): string {
   return (
     OPERASIONAL_TABLE_MAP[aktivitas as OperasionalRecord["aktivitas"]] ||
-    "perawatan_pruning"
+    "produksi"
   );
 }
 
@@ -60,13 +60,12 @@ function getTabFromPath(pathname: string): AktivitasType {
   if (p.includes("/pemupukan")) return "pemupukan";
   if (p.includes("/semprot")) return "semprot";
   if (p.includes("/jangkos")) return "jangkos";
-  return "pruning";
+  return "produksi";
 }
 
 function toDbPayload(r: OperasionalRecord) {
   return {
-    id: r.id,
-    company: r.company || getCompanyForEstate(r.estate),
+    id: r.id || `ops-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
     region: r.region,
     estate: r.estate,
     afdeling: r.afdeling,
@@ -82,12 +81,6 @@ function toDbPayload(r: OperasionalRecord) {
     periode: r.periode,
     tanggal: r.tanggal,
     keterangan: r.keterangan,
-    kuota_revisi: r.kuota_revisi ?? 2,
-    revisi_ke: r.revisi_ke ?? 0,
-    is_locked: r.is_locked ?? false,
-    alasan_revisi: r.alasan_revisi || null,
-    direvisi_oleh: r.direvisi_oleh || null,
-    waktu_revisi: r.waktu_revisi || null,
     coordinates: r.rawGeometry || (r.polygonCoords
       ? {
           type: "Polygon",
@@ -159,7 +152,7 @@ export default function DataOperasionalPage({
       const { data, error } = await supabase
         .from(targetTable)
         .select(
-          "id,company,region,estate,afdeling,blok,warung,luas_ha,realisasi_luas_ha,capaian_persen,sph,kondisi,kontraktor,update_peta,periode,tanggal,keterangan,coordinates,kuota_revisi,revisi_ke,is_locked,alasan_revisi,direvisi_oleh,waktu_revisi",
+          "id,region,estate,afdeling,blok,warung,luas_ha,realisasi_luas_ha,capaian_persen,sph,kondisi,kontraktor,update_peta,periode,tanggal,keterangan,coordinates",
           {},
           { limit: 3000 }
         );
@@ -629,7 +622,8 @@ export default function DataOperasionalPage({
           // 3. Eksekusi UPDATE & Simpan Snapshot Riwayat untuk record yang direvisi
           let updatedCount = 0;
           for (const item of recordsToUpdate) {
-            const { error: updErr } = await supabase.from(tableName).update(item.payload, { id: `eq.${item.id}` });
+            const dbPayload = toDbPayload(item.payload as any);
+            const { error: updErr } = await supabase.from(tableName).update(dbPayload, { id: `eq.${item.id}` });
             if (!updErr) {
               updatedCount += 1;
               totalInserted += 1;
