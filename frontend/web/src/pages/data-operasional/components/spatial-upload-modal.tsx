@@ -154,9 +154,80 @@ export default function SpatialUploadModal({
           throw new Error("Tidak ditemukan fitur poligon spasial dalam berkas Shapefile ini.");
         }
 
-        setStatusMsg(`Mengekstrak ${features.length} poligon blok dan atribut...`);
+        setStatusMsg(`Menggabungkan & menyinkronkan ${features.length} poligon blok...`);
 
-        createdRecords = features.map((f: any, idx: number) => {
+        // ─── GABUNGKAN MULTI-PART POLIGON BERDASARKAN KUNCI BLOK (ESTATE + AFD + BLOK) ───
+        // Mencegah blok terpecah menjadi puluhan irisan terpisah yang menyebabkan celah/lubang kosong
+        const groupedFeaturesMap = new Map<string, any[]>();
+        features.forEach((f: any) => {
+          const p = f.properties || {};
+          const est = String(p.ESTATE || p.Estate || p.estate || "BUM 1").trim().toUpperCase();
+          const rawAfd = p.AFD || p.Afdeling || p.afdeling || "AFD 1";
+          const afd = String(rawAfd).trim().toUpperCase();
+          const rawBlok = p.BLOK ?? p.Blok ?? p.blok ?? p.BLOCK ?? p.NAME ?? "BLK";
+          const blk = String(rawBlok).trim().toUpperCase();
+          const key = `${est}|${afd}|${blk}`;
+
+          if (!groupedFeaturesMap.has(key)) {
+            groupedFeaturesMap.set(key, []);
+          }
+          groupedFeaturesMap.get(key)!.push(f);
+        });
+
+        const mergedFeatures: any[] = [];
+        groupedFeaturesMap.forEach((parts) => {
+          if (parts.length === 1) {
+            mergedFeatures.push(parts[0]);
+          } else {
+            // Urutkan potongan berdasarkan luas terbesar (agar properti utama mengacu ke potongan utama)
+            parts.sort((a, b) => {
+              try {
+                return turf.area(b) - turf.area(a);
+              } catch {
+                return 0;
+              }
+            });
+
+            let mergedGeom = parts[0].geometry;
+            try {
+              const u = turf.union(turf.featureCollection(parts));
+              if (u && u.geometry) mergedGeom = u.geometry;
+            } catch {
+              const allPolys: any[] = [];
+              parts.forEach((p) => {
+                if (p.geometry.type === "Polygon") allPolys.push(p.geometry.coordinates);
+                else if (p.geometry.type === "MultiPolygon") {
+                  p.geometry.coordinates.forEach((polyCoords: any) => allPolys.push(polyCoords));
+                }
+              });
+              mergedGeom = { type: "MultiPolygon", coordinates: allPolys };
+            }
+
+            let sumAreaHa = 0;
+            parts.forEach((p) => {
+              try {
+                const a = turf.area(p);
+                if (a > 0) sumAreaHa += a / 10000;
+              } catch {}
+            });
+
+            const primaryProps = { ...parts[0].properties };
+            primaryProps.LuasHA = Number(sumAreaHa.toFixed(2));
+            primaryProps.Realiluas = Number(sumAreaHa.toFixed(2));
+            primaryProps.Luas_Ha = Number(sumAreaHa.toFixed(2));
+            primaryProps.LUAS_HA = Number(sumAreaHa.toFixed(2));
+            primaryProps.luas = Number(sumAreaHa.toFixed(2));
+            primaryProps.Luas = Number(sumAreaHa.toFixed(2));
+
+            mergedFeatures.push({
+              type: "Feature",
+              geometry: mergedGeom,
+              properties: primaryProps,
+            });
+          }
+        });
+
+        createdRecords = mergedFeatures.map((f: any, idx: number) => {
           const p = f.properties || {};
           const est = p.ESTATE || p.Estate || p.estate || "BUM 1";
           const rawAfd = p.AFD || p.Afdeling || p.afdeling;
@@ -259,9 +330,75 @@ export default function SpatialUploadModal({
           throw new Error("Tidak ditemukan fitur spasial dalam berkas GeoJSON.");
         }
 
-        setStatusMsg(`Mengekstrak ${features.length} fitur GeoJSON...`);
+        setStatusMsg(`Menggabungkan & menyinkronkan ${features.length} fitur GeoJSON...`);
 
-        createdRecords = features.map((f: any, idx: number) => {
+        const groupedGeoJsonMap = new Map<string, any[]>();
+        features.forEach((f: any) => {
+          const p = f.properties || {};
+          const est = String(p.ESTATE || p.Estate || p.estate || "BUM 1").trim().toUpperCase();
+          const rawAfd = p.AFD || p.Afdeling || p.afdeling || "AFD 1";
+          const afd = String(rawAfd).trim().toUpperCase();
+          const rawBlok = p.BLOK ?? p.Blok ?? p.blok ?? p.NAME ?? "BLK";
+          const blk = String(rawBlok).trim().toUpperCase();
+          const key = `${est}|${afd}|${blk}`;
+
+          if (!groupedGeoJsonMap.has(key)) {
+            groupedGeoJsonMap.set(key, []);
+          }
+          groupedGeoJsonMap.get(key)!.push(f);
+        });
+
+        const mergedGeoJsonFeatures: any[] = [];
+        groupedGeoJsonMap.forEach((parts) => {
+          if (parts.length === 1) {
+            mergedGeoJsonFeatures.push(parts[0]);
+          } else {
+            parts.sort((a, b) => {
+              try {
+                return turf.area(b) - turf.area(a);
+              } catch {
+                return 0;
+              }
+            });
+
+            let mergedGeom = parts[0].geometry;
+            try {
+              const u = turf.union(turf.featureCollection(parts));
+              if (u && u.geometry) mergedGeom = u.geometry;
+            } catch {
+              const allPolys: any[] = [];
+              parts.forEach((p) => {
+                if (p.geometry.type === "Polygon") allPolys.push(p.geometry.coordinates);
+                else if (p.geometry.type === "MultiPolygon") {
+                  p.geometry.coordinates.forEach((polyCoords: any) => allPolys.push(polyCoords));
+                }
+              });
+              mergedGeom = { type: "MultiPolygon", coordinates: allPolys };
+            }
+
+            let sumAreaHa = 0;
+            parts.forEach((p) => {
+              try {
+                const a = turf.area(p);
+                if (a > 0) sumAreaHa += a / 10000;
+              } catch {}
+            });
+
+            const primaryProps = { ...parts[0].properties };
+            primaryProps.LUAS_HA = Number(sumAreaHa.toFixed(2));
+            primaryProps.Luas = Number(sumAreaHa.toFixed(2));
+            primaryProps.luas = Number(sumAreaHa.toFixed(2));
+            primaryProps.Luas_Ha = Number(sumAreaHa.toFixed(2));
+
+            mergedGeoJsonFeatures.push({
+              type: "Feature",
+              geometry: mergedGeom,
+              properties: primaryProps,
+            });
+          }
+        });
+
+        createdRecords = mergedGeoJsonFeatures.map((f: any, idx: number) => {
           const p = f.properties || {};
           const est = p.ESTATE || p.Estate || p.estate || "BUM 1";
           const rawAfd = p.AFD || p.Afdeling || p.afdeling;

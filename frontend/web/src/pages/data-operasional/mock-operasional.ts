@@ -59,6 +59,9 @@ export const KONDISI_COLORS_BY_AKTIVITAS: Record<string, Record<string, string>>
     "BAPP": "#5B5B24",         // Kuning Zaitun BAPP
     "Sedang": "#FFFF00",       // Kuning
     "Berat": "#FF8DA1",        // Merah Muda / Pink
+    "Pruning Thn Sebelumnya": "#60A5FA", // Biru Cerah (Tahun Sebelumnya)
+    "Hutan": "#14532D",        // Hijau Rimba / Hutan
+    "BIBITAN": "#A855F7",      // Ungu Bibitan
   },
   pasar_pikul: {
     "BAPP": "#00B050",         // Hijau Emerald
@@ -168,6 +171,9 @@ export const getStatusHexColor = (kondisi: string, aktivitas?: string): string =
   }
 
   const k = kondisi.toLowerCase();
+  if (k.includes("thn sebelumnya") || k.includes("tahun sebelumnya")) return "#60A5FA";
+  if (k.includes("hutan")) return "#14532D";
+  if (k.includes("bibitan")) return "#A855F7";
   if (k.includes("rencana")) return "#0000FF";
   if (k.includes("realisasi")) return "#F97316";
   if (k.includes("progresif")) return "#008000";

@@ -193,10 +193,21 @@ export default function AfdelingBlockMapModal({
     const bKey = String(m.Blok || "").trim().toUpperCase();
     if (!blockMap.has(bKey) && m.coordinates) {
       let coords: [number, number][] = [];
-      if (m.coordinates.type === "Polygon" && m.coordinates.coordinates?.[0]) {
+      let rawGeom: any = null;
+
+      if (Array.isArray(m.coordinates) && m.coordinates.length >= 3) {
+        // Format baku array [lat, lng][] dari batas_blok
+        coords = m.coordinates;
+        rawGeom = {
+          type: "Polygon",
+          coordinates: [m.coordinates.map(([lat, lng]: [number, number]) => [lng, lat])],
+        };
+      } else if (m.coordinates.type === "Polygon" && m.coordinates.coordinates?.[0]) {
         coords = m.coordinates.coordinates[0].map(([lng, lat]: [number, number]) => [lat, lng]);
+        rawGeom = m.coordinates;
       } else if (m.coordinates.type === "MultiPolygon" && m.coordinates.coordinates?.[0]?.[0]) {
         coords = m.coordinates.coordinates[0][0].map(([lng, lat]: [number, number]) => [lat, lng]);
+        rawGeom = m.coordinates;
       }
 
       blockMap.set(bKey, {
@@ -208,7 +219,7 @@ export default function AfdelingBlockMapModal({
         mandor: "-",
         statusColor: "#475569", // Neutral slate dark
         polygonCoords: coords,
-        rawGeometry: m.coordinates,
+        rawGeometry: rawGeom,
       });
     }
   });
@@ -646,8 +657,19 @@ export default function AfdelingBlockMapModal({
         let layer: L.Layer | null = null;
 
         // 1. Gambar poligon dasar utuh (outer ring) terlebih dahulu agar poligon tidak memiliki lubang/bolong tembus pandang
-        if (item.polygonCoords && item.polygonCoords.length >= 3) {
-          L.polygon(item.polygonCoords, {
+        let outerCoords: [number, number][] = item.polygonCoords;
+        if ((!outerCoords || outerCoords.length < 3) && item.rawGeometry) {
+          try {
+            if (item.rawGeometry.type === "Polygon" && item.rawGeometry.coordinates?.[0]) {
+              outerCoords = item.rawGeometry.coordinates[0].map(([lng, lat]: [number, number]) => [lat, lng]);
+            } else if (item.rawGeometry.type === "MultiPolygon" && item.rawGeometry.coordinates?.[0]?.[0]) {
+              outerCoords = item.rawGeometry.coordinates[0][0].map(([lng, lat]: [number, number]) => [lat, lng]);
+            }
+          } catch {}
+        }
+
+        if (outerCoords && outerCoords.length >= 3) {
+          L.polygon(outerCoords, {
             color: isTargetBlock ? "#ffffff" : "#1e293b",
             weight: isTargetBlock ? 3 : 1.2,
             fillColor: item.statusColor,
