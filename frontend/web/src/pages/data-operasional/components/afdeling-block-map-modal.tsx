@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import * as turf from "@turf/turf";
+import { supabase } from "@/lib/supabase";
 import type { OperasionalRecord } from "../types";
 import {
   DEFAULT_KONDISI_OPTIONS,
@@ -118,6 +119,32 @@ export default function AfdelingBlockMapModal({
   const [measurePointNames, setMeasurePointNames] = useState<string[]>([]);
   const [totalDistanceMeters, setTotalDistanceMeters] = useState<number>(0);
 
+  // State seluruh blok baku master dari batas_blok (anti-bolong/hilang)
+  const [masterAfdBlocks, setMasterAfdBlocks] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!record?.estate || !record?.afdeling) return;
+    const currentEstate = record.estate;
+    const currentAfdeling = record.afdeling;
+    let active = true;
+    async function loadMasterAfdeling() {
+      try {
+        const { data } = await supabase.from("batas_blok").select(
+          "id,Estate,Afdeling,Blok,Luas,coordinates",
+          { Estate: `eq.${currentEstate}`, Afdeling: `eq.${currentAfdeling}` },
+          { limit: 200 }
+        );
+        if (active && Array.isArray(data)) {
+          setMasterAfdBlocks(data);
+        }
+      } catch {}
+    }
+    loadMasterAfdeling();
+    return () => {
+      active = false;
+    };
+  }, [record?.estate, record?.afdeling]);
+
   // Ambil record yang cocok di afdeling yang sama jika ada
   const siblingRecords = allRecords.filter(
     (r) => r.afdeling === record.afdeling && r.estate === record.estate && r.blok !== record.blok
@@ -126,26 +153,29 @@ export default function AfdelingBlockMapModal({
   // Daftar kondisi resmi sesuai aktivitas
   const availableKondisi = getKondisiOptionsByAktivitas(record.aktivitas);
 
-  // Buat daftar blok untuk afdeling ini (hanya dari data nyata yang memiliki koordinat valid atau rawGeometry)
-  const afdelingBlocks: AfdelingBlockItem[] = [
-    ...((record.polygonCoords && record.polygonCoords.length >= 3) || record.rawGeometry
-      ? [
-          {
-            blok: record.blok,
-            luas_ha: record.luas_ha,
-            realisasi_luas_ha: record.realisasi_luas_ha,
-            capaian_persen: record.capaian_persen,
-            kondisi: record.kondisi,
-            mandor: record.kontraktor,
-            statusColor: getStatusHexColor(record.kondisi, record.aktivitas),
-            polygonCoords: record.polygonCoords || [],
-            rawGeometry: record.rawGeometry,
-          },
-        ]
-      : []),
-    ...siblingRecords
-      .filter((sib) => (sib.polygonCoords && sib.polygonCoords.length >= 3) || sib.rawGeometry)
-      .map((sib) => ({
+  // Buat map blok afdeling lengkap: gabungkan data operasional + master batas_blok (agar tidak ada lubang kosong)
+  const blockMap = new Map<string, AfdelingBlockItem>();
+
+  // 1. Masukkan blok yang sedang dibuka
+  if ((record.polygonCoords && record.polygonCoords.length >= 3) || record.rawGeometry) {
+    blockMap.set(record.blok.trim().toUpperCase(), {
+      blok: record.blok,
+      luas_ha: record.luas_ha,
+      realisasi_luas_ha: record.realisasi_luas_ha,
+      capaian_persen: record.capaian_persen,
+      kondisi: record.kondisi,
+      mandor: record.kontraktor,
+      statusColor: getStatusHexColor(record.kondisi, record.aktivitas),
+      polygonCoords: record.polygonCoords || [],
+      rawGeometry: record.rawGeometry,
+    });
+  }
+
+  // 2. Masukkan sibling records dari tabel operasional
+  siblingRecords
+    .filter((sib) => (sib.polygonCoords && sib.polygonCoords.length >= 3) || sib.rawGeometry)
+    .forEach((sib) => {
+      blockMap.set(sib.blok.trim().toUpperCase(), {
         blok: sib.blok,
         luas_ha: sib.luas_ha,
         realisasi_luas_ha: sib.realisasi_luas_ha,
@@ -155,8 +185,35 @@ export default function AfdelingBlockMapModal({
         statusColor: getStatusHexColor(sib.kondisi, record.aktivitas),
         polygonCoords: (sib.polygonCoords as [number, number][]) || [],
         rawGeometry: sib.rawGeometry,
-      })),
-  ];
+      });
+    });
+
+  // 3. Gabungkan seluruh blok master batas_blok afdeling agar TIDAK ADA BLOK YANG BOLONG / HILANG
+  masterAfdBlocks.forEach((m) => {
+    const bKey = String(m.Blok || "").trim().toUpperCase();
+    if (!blockMap.has(bKey) && m.coordinates) {
+      let coords: [number, number][] = [];
+      if (m.coordinates.type === "Polygon" && m.coordinates.coordinates?.[0]) {
+        coords = m.coordinates.coordinates[0].map(([lng, lat]: [number, number]) => [lat, lng]);
+      } else if (m.coordinates.type === "MultiPolygon" && m.coordinates.coordinates?.[0]?.[0]) {
+        coords = m.coordinates.coordinates[0][0].map(([lng, lat]: [number, number]) => [lat, lng]);
+      }
+
+      blockMap.set(bKey, {
+        blok: m.Blok,
+        luas_ha: Number(m.Luas || 25),
+        realisasi_luas_ha: 0,
+        capaian_persen: 0,
+        kondisi: "Belum Dikerjakan",
+        mandor: "-",
+        statusColor: "#475569", // Neutral slate dark
+        polygonCoords: coords,
+        rawGeometry: m.coordinates,
+      });
+    }
+  });
+
+  const afdelingBlocks: AfdelingBlockItem[] = Array.from(blockMap.values());
 
   // Titik TPH (kosong tanpa data dummy)
   const tphList: TPHPoint[] = [];
@@ -587,6 +644,19 @@ export default function AfdelingBlockMapModal({
         const isTargetBlock = item.blok === selectedBlockId;
 
         let layer: L.Layer | null = null;
+
+        // 1. Gambar poligon dasar utuh (outer ring) terlebih dahulu agar poligon tidak memiliki lubang/bolong tembus pandang
+        if (item.polygonCoords && item.polygonCoords.length >= 3) {
+          L.polygon(item.polygonCoords, {
+            color: isTargetBlock ? "#ffffff" : "#1e293b",
+            weight: isTargetBlock ? 3 : 1.2,
+            fillColor: item.statusColor,
+            fillOpacity: isTargetBlock ? 0.85 : 0.65,
+            opacity: isTargetBlock ? 1 : 0.8,
+          }).addTo(polygonGroup);
+        }
+
+        // 2. Render layer geometri GeoJSON
         if (item.rawGeometry) {
           layer = L.geoJSON(item.rawGeometry, {
             style: {
@@ -946,7 +1016,7 @@ export default function AfdelingBlockMapModal({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [basemap, selectedBlockId, mode, editPolygons, selectedEditPolyId, activeTool, snappingEnabled, measurePoints, showBeforeAfter, snapshot]);
+  }, [basemap, selectedBlockId, mode, editPolygons, selectedEditPolyId, activeTool, snappingEnabled, measurePoints, showBeforeAfter, snapshot, masterAfdBlocks]);
 
   return (
     <div
