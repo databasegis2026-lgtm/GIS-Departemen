@@ -168,7 +168,16 @@ export default function EditPetaSpasialPage() {
           if (!geom) return;
 
           const rawPolygons: [number, number][][][] = [];
-          if (geom.type === "Polygon" && Array.isArray(geom.coordinates)) {
+          if (Array.isArray(geom) && geom.length >= 3) {
+            // Format baku array [lat, lng][] dari batas_blok Supabase
+            if (typeof geom[0]?.[0] === "number") {
+              const convertedToGeoJsonRing = geom.map(([lat, lng]: [number, number]) => [lng, lat] as [number, number]);
+              rawPolygons.push([convertedToGeoJsonRing]);
+            } else if (Array.isArray(geom[0]) && typeof geom[0][0]?.[0] === "number") {
+              // Array of rings
+              rawPolygons.push(geom);
+            }
+          } else if (geom.type === "Polygon" && Array.isArray(geom.coordinates)) {
             rawPolygons.push(geom.coordinates);
           } else if (geom.type === "MultiPolygon" && Array.isArray(geom.coordinates)) {
             geom.coordinates.forEach((poly: any) => {
